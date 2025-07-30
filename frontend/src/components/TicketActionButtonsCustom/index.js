@@ -59,9 +59,6 @@ const TicketActionButtonsCustom = ({ ticket }) => {
 			await api.put(`/tickets/${ticket.id}`, {
 				status: status,
 				userId: userId || null,
-				useIntegration: status === "closed" ? false : ticket.useIntegration,
-				promptId: status === "closed" ? false : ticket.promptId,
-				integrationId: status === "closed" ? false : ticket.integrationId
 			});
 
 			setLoading(false);

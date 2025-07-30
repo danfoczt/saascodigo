@@ -41,8 +41,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     name,
     profile,
     companyId: bodyCompanyId,
-    queueIds,
-    whatsappId
+    queueIds
   } = req.body;
   let userCompanyId: number | null = null;
 
@@ -66,8 +65,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     name,
     profile,
     companyId: bodyCompanyId || userCompanyId,
-    queueIds,
-    whatsappId
+    queueIds
   });
 
   const io = getIO();

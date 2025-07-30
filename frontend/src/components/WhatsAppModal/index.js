@@ -17,10 +17,6 @@ import {
   Switch,
   FormControlLabel,
   Grid,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
 } from "@material-ui/core";
 
 import api from "../../services/api";
@@ -73,29 +69,12 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
     isDefault: false,
     token: "",
     provider: "beta",
-    timeSendQueue: 0,
-    sendIdQueue: 0,
-    expiresInactiveMessage: "",
+    useNPS: false,
+    expiresTicketNPS: 3,
     expiresTicket: 0,
-    timeUseBotQueues: 0,
-    maxUseBotQueues: 3
   };
   const [whatsApp, setWhatsApp] = useState(initialState);
   const [selectedQueueIds, setSelectedQueueIds] = useState([]);
-  const [queues, setQueues] = useState([]);
-  const [selectedPrompt, setSelectedPrompt] = useState(null);
-  const [prompts, setPrompts] = useState([]);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const { data } = await api.get("/prompt");
-        setPrompts(data.prompts);
-      } catch (err) {
-        toastError(err);
-      }
-    })();
-  }, [whatsAppId]);
 
   useEffect(() => {
     const fetchSession = async () => {
@@ -103,9 +82,7 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
 
       try {
         const { data } = await api.get(`whatsapp/${whatsAppId}?session=0`);
-        console.log(data)
         setWhatsApp(data);
-        data.promptId ? setSelectedPrompt(data.promptId) : setSelectedPrompt(null);
 
         const whatsQueueIds = data.queues?.map((queue) => queue.id);
         setSelectedQueueIds(whatsQueueIds);
@@ -116,22 +93,8 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
     fetchSession();
   }, [whatsAppId]);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const { data } = await api.get("/queue");
-        setQueues(data);
-      } catch (err) {
-        toastError(err);
-      }
-    })();
-  }, []);
-
   const handleSaveWhatsApp = async (values) => {
-    const whatsappData = {
-      ...values, queueIds: selectedQueueIds,
-      promptId: selectedPrompt ? selectedPrompt : null
-    };
+    const whatsappData = { ...values, queueIds: selectedQueueIds };
     delete whatsappData["queues"];
     delete whatsappData["session"];
 
@@ -148,16 +111,6 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
     }
   };
 
-  const handleChangeQueue = (e) => {
-    setSelectedQueueIds(e);
-    setSelectedPrompt(null);
-  };
-
-  const handleChangePrompt = (e) => {
-    setSelectedPrompt(e.target.value);
-    setSelectedQueueIds([]);
-  };
-
   const handleClose = () => {
     onClose();
     setWhatsApp(initialState);
@@ -168,7 +121,7 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
       <Dialog
         open={open}
         onClose={handleClose}
-        maxWidth="md"
+        maxWidth="sm"
         fullWidth
         scroll="paper"
       >
@@ -205,6 +158,7 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
                         margin="dense"
                         className={classes.textField}
                       />
+
                     </Grid>
                     <Grid style={{ paddingTop: 15 }} item>
                       <FormControlLabel
@@ -218,6 +172,20 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
                         }
                         label={i18n.t("whatsappModal.form.default")}
                       />
+                    </Grid>
+
+                    <Grid item>
+                    <Field
+                        as={TextField}
+                        label={'Encerrar chat após x horas'}
+                        name="expiresTicket"
+                        error={touched.expiresTicket && Boolean(errors.expiresTicket)}
+                        helperText={touched.expiresTicket && errors.expiresTicket}
+                        variant="outlined"
+                        margin="dense"
+                        className={classes.textFieldTime}
+                      />
+
                     </Grid>
                   </Grid>
                 </div>
@@ -310,153 +278,8 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
                 </div>
                 <QueueSelect
                   selectedQueueIds={selectedQueueIds}
-                  onChange={(selectedIds) => handleChangeQueue(selectedIds)}
+                  onChange={(selectedIds) => setSelectedQueueIds(selectedIds)}
                 />
-                <FormControl
-                  margin="dense"
-                  variant="outlined"
-                  fullWidth
-                >
-                  <InputLabel>
-                    {i18n.t("whatsappModal.form.prompt")}
-                  </InputLabel>
-                  <Select
-                    labelId="dialog-select-prompt-label"
-                    id="dialog-select-prompt"
-                    name="promptId"
-                    value={selectedPrompt || ""}
-                    onChange={handleChangePrompt}
-                    label={i18n.t("whatsappModal.form.prompt")}
-                    fullWidth
-                    MenuProps={{
-                      anchorOrigin: {
-                        vertical: "bottom",
-                        horizontal: "left",
-                      },
-                      transformOrigin: {
-                        vertical: "top",
-                        horizontal: "left",
-                      },
-                      getContentAnchorEl: null,
-                    }}
-                  >
-                    {prompts.map((prompt) => (
-                      <MenuItem
-                        key={prompt.id}
-                        value={prompt.id}
-                      >
-                        {prompt.name}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-                <div>
-                  <h3>{i18n.t("whatsappModal.form.queueRedirection")}</h3>
-                  <p>{i18n.t("whatsappModal.form.queueRedirectionDesc")}</p>
-                  <Grid spacing={2} container>
-
-                    <Grid xs={6} md={6} item>
-                      <FormControl
-                        variant="outlined"
-                        margin="dense"
-                        className={classes.FormControl}
-                        fullWidth
-                      >
-                        <InputLabel id="sendIdQueue-selection-label">
-                          {i18n.t("whatsappModal.form.sendIdQueue")}
-                        </InputLabel>
-                        <Field
-                          as={Select}
-                          name="sendIdQueue"
-                          id="sendIdQueue"
-                          label={i18n.t("whatsappModal.form.sendIdQueue")}
-                          placeholder={i18n.t("whatsappModal.form.sendIdQueue")}
-                          labelId="sendIdQueue-selection-label"
-                        >
-                          <MenuItem value={0}>&nbsp;</MenuItem>
-                          {queues.map(queue => (
-                            <MenuItem key={queue.id} value={queue.id}>
-                              {queue.name}
-                            </MenuItem>
-                          ))}
-                        </Field>
-                      </FormControl>
-
-                    </Grid>
-
-                    <Grid xs={6} md={6} item>
-                      <Field
-                        as={TextField}
-                        label={i18n.t("whatsappModal.form.timeSendQueue")}
-                        fullWidth
-                        name="timeSendQueue"
-                        variant="outlined"
-                        margin="dense"
-                        error={touched.timeSendQueue && Boolean(errors.timeSendQueue)}
-                        helperText={touched.timeSendQueue && errors.timeSendQueue}
-                      />
-                    </Grid>
-
-                  </Grid>
-                  <Grid spacing={2} container>
-                    {/* QUANTIDADE MÁXIMA DE VEZES QUE O CHATBOT VAI SER ENVIADO */}
-                    <Grid xs={12} md={6} item>
-                      <Field
-                        as={TextField}
-                        label={i18n.t("whatsappModal.form.maxUseBotQueues")}
-                        fullWidth
-                        name="maxUseBotQueues"
-                        variant="outlined"
-                        margin="dense"
-                        error={touched.maxUseBotQueues && Boolean(errors.maxUseBotQueues)}
-                        helperText={touched.maxUseBotQueues && errors.maxUseBotQueues}
-                      />
-                    </Grid>
-                    {/* TEMPO PARA ENVIO DO CHATBOT */}
-                    <Grid xs={12} md={6} item>
-                      <Field
-                        as={TextField}
-                        label={i18n.t("whatsappModal.form.timeUseBotQueues")}
-                        fullWidth
-                        name="timeUseBotQueues"
-                        variant="outlined"
-                        margin="dense"
-                        error={touched.timeUseBotQueues && Boolean(errors.timeUseBotQueues)}
-                        helperText={touched.timeUseBotQueues && errors.timeUseBotQueues}
-                      />
-                    </Grid>
-                  </Grid>
-                  <Grid spacing={2} container>
-                    {/* ENCERRAR CHATS ABERTOS APÓS X HORAS */}
-                    <Grid xs={12} md={12} item>
-                      <Field
-                        as={TextField}
-                        label={i18n.t("whatsappModal.form.expiresTicket")}
-                        fullWidth
-                        name="expiresTicket"
-                        variant="outlined"
-                        margin="dense"
-                        error={touched.expiresTicket && Boolean(errors.expiresTicket)}
-                        helperText={touched.expiresTicket && errors.expiresTicket}
-                      />
-                    </Grid>
-                  </Grid>
-                  {/* MENSAGEM POR INATIVIDADE*/}
-                  <div>
-                    <Field
-                      as={TextField}
-                      label={i18n.t("whatsappModal.form.expiresInactiveMessage")}
-                      multiline
-                      rows={4}
-                      fullWidth
-                      name="expiresInactiveMessage"
-                      error={touched.expiresInactiveMessage && Boolean(errors.expiresInactiveMessage)}
-                      helperText={touched.expiresInactiveMessage && errors.expiresInactiveMessage}
-                      variant="outlined"
-                      margin="dense"
-                    />
-                  </div>
-                </div>
               </DialogContent>
               <DialogActions>
                 <Button
