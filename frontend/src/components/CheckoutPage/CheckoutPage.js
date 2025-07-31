@@ -49,7 +49,7 @@ function _renderStepContent(step, setFieldValue, setActiveStep, values ) {
     case 0:
       return <AddressForm formField={formField} values={values} setFieldValue={setFieldValue}  />;
     case 1:
-      return <PaymentForm 
+      return <PaymentForm
       formField={formField} 
       setFieldValue={setFieldValue} 
       setActiveStep={setActiveStep} 
