@@ -40,6 +40,11 @@ const useStyles = makeStyles((theme) => ({
   root: {
     display: "flex",
     flexWrap: "wrap",
+    backgroundColor: "#fff"
+  },
+
+  tabmsg: {
+    backgroundColor: theme.palette.campaigntab,
   },
 
   textField: {
@@ -69,9 +74,9 @@ const useStyles = makeStyles((theme) => ({
 
 const CampaignSchema = Yup.object().shape({
   name: Yup.string()
-    .min(2, "Too Short!")
-    .max(50, "Too Long!")
-    .required("Required"),
+    .min(2, i18n.t("campaigns.dialog.form.nameShort"))
+    .max(50, i18n.t("campaigns.dialog.form.nameLong"))
+    .required(i18n.t("campaigns.dialog.form.nameRequired")),
 });
 
 const CampaignModal = ({
@@ -86,6 +91,7 @@ const CampaignModal = ({
   const isMounted = useRef(true);
   const { user } = useContext(AuthContext);
   const { companyId } = user;
+  const [file, setFile] = useState(null);
 
   const initialState = {
     name: "",
@@ -94,16 +100,11 @@ const CampaignModal = ({
     message3: "",
     message4: "",
     message5: "",
-    confirmationMessage1: "",
-    confirmationMessage2: "",
-    confirmationMessage3: "",
-    confirmationMessage4: "",
-    confirmationMessage5: "",
     status: "INATIVA", // INATIVA, PROGRAMADA, EM_ANDAMENTO, CANCELADA, FINALIZADA,
-    confirmation: false,
     scheduledAt: "",
     whatsappId: "",
     contactListId: "",
+    tagListId: "Nenhuma",
     companyId,
   };
 
@@ -115,11 +116,26 @@ const CampaignModal = ({
   const [confirmationOpen, setConfirmationOpen] = useState(false);
   const [campaignEditable, setCampaignEditable] = useState(true);
   const attachmentFile = useRef(null);
+  const [tagLists, setTagLists] = useState([]);
 
   useEffect(() => {
     return () => {
       isMounted.current = false;
     };
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await api.get("/files/", {
+          params: { companyId }
+        });
+
+        setFile(data.files);
+      } catch (err) {
+        toastError(err);
+      }
+    })();
   }, []);
 
   useEffect(() => {
@@ -138,6 +154,20 @@ const CampaignModal = ({
         .get(`/whatsapp`, { params: { companyId, session: 0 } })
         .then(({ data }) => setWhatsapps(data));
 
+      api.get(`/tags`, { params: { companyId } })
+        .then(({ data }) => {
+          const fetchedTags = data.tags;
+          // Perform any necessary data transformation here
+          const formattedTagLists = fetchedTags.map((tag) => ({
+            id: tag.id,
+            name: tag.name,
+          }));
+          setTagLists(formattedTagLists);
+        })
+        .catch((error) => {
+          console.error("Error retrieving tags:", error);
+        });
+        
       if (!campaignId) return;
 
       api.get(`/campaigns/${campaignId}`).then(({ data }) => {
@@ -152,7 +182,7 @@ const CampaignModal = ({
             }
           });
 
-          return prevCampaignData;
+          return {...prevCampaignData, tagListId: data.tagId || "Nenhuma"};
         });
       });
     }
@@ -247,24 +277,7 @@ const CampaignModal = ({
         placeholder={i18n.t("campaigns.dialog.form.messagePlaceholder")}
         multiline={true}
         variant="outlined"
-        helperText="Utilize variáveis como {nome}, {numero}, {email} ou defina variáveis personalziadas."
-        disabled={!campaignEditable && campaign.status !== "CANCELADA"}
-      />
-    );
-  };
-
-  const renderConfirmationMessageField = (identifier) => {
-    return (
-      <Field
-        as={TextField}
-        id={identifier}
-        name={identifier}
-        fullWidth
-        rows={5}
-        label={i18n.t(`campaigns.dialog.form.${identifier}`)}
-        placeholder={i18n.t("campaigns.dialog.form.messagePlaceholder")}
-        multiline={true}
-        variant="outlined"
+        helperText={i18n.t("campaigns.dialog.form.helper")}
         disabled={!campaignEditable && campaign.status !== "CANCELADA"}
       />
     );
@@ -356,35 +369,6 @@ const CampaignModal = ({
                       disabled={!campaignEditable}
                     />
                   </Grid>
-                  <Grid xs={12} md={3} item>
-                    <FormControl
-                      variant="outlined"
-                      margin="dense"
-                      fullWidth
-                      className={classes.formControl}
-                    >
-                      <InputLabel id="confirmation-selection-label">
-                        {i18n.t("campaigns.dialog.form.confirmation")}
-                      </InputLabel>
-                      <Field
-                        as={Select}
-                        label={i18n.t("campaigns.dialog.form.confirmation")}
-                        placeholder={i18n.t(
-                          "campaigns.dialog.form.confirmation"
-                        )}
-                        labelId="confirmation-selection-label"
-                        id="confirmation"
-                        name="confirmation"
-                        error={
-                          touched.confirmation && Boolean(errors.confirmation)
-                        }
-                        disabled={!campaignEditable}
-                      >
-                        <MenuItem value={false}>Desabilitada</MenuItem>
-                        <MenuItem value={true}>Habilitada</MenuItem>
-                      </Field>
-                    </FormControl>
-                  </Grid>
                   <Grid xs={12} md={4} item>
                     <FormControl
                       variant="outlined"
@@ -417,6 +401,36 @@ const CampaignModal = ({
                               value={contactList.id}
                             >
                               {contactList.name}
+                            </MenuItem>
+                          ))}
+                      </Field>
+                    </FormControl>
+                  </Grid>
+                  <Grid xs={12} md={4} item>
+                    <FormControl
+                      variant="outlined"
+                      margin="dense"
+                      fullWidth
+                      className={classes.formControl}
+                    >
+                      <InputLabel id="tagList-selection-label">
+                        {i18n.t("campaigns.dialog.form.tagList")}
+                      </InputLabel>
+                      <Field
+                        as={Select}
+                        label={i18n.t("campaigns.dialog.form.tagList")}
+                        placeholder={i18n.t("campaigns.dialog.form.tagList")}
+                        labelId="tagList-selection-label"
+                        id="tagListId"
+                        name="tagListId"
+                        error={touched.tagListId && Boolean(errors.tagListId)}
+                        disabled={!campaignEditable}
+                      >
+                        <MenuItem value="">Nenhuma</MenuItem>
+                        {Array.isArray(tagLists) &&
+                          tagLists.map((tagList) => (
+                            <MenuItem key={tagList.id} value={tagList.id}>
+                              {tagList.name}
                             </MenuItem>
                           ))}
                       </Field>
@@ -470,17 +484,42 @@ const CampaignModal = ({
                       disabled={!campaignEditable}
                     />
                   </Grid>
+                  <Grid xs={12} md={4} item>
+                  <FormControl
+                      variant="outlined"
+                      margin="dense"
+                      className={classes.FormControl}
+                      fullWidth
+                    >
+                      <InputLabel id="fileListId-selection-label">{i18n.t("campaigns.dialog.form.fileList")}</InputLabel>
+                      <Field
+                        as={Select}
+                        label={i18n.t("campaigns.dialog.form.fileList")}
+                        name="fileListId"
+                        id="fileListId"
+                        placeholder={i18n.t("campaigns.dialog.form.fileList")}
+                        labelId="fileListId-selection-label"
+                        value={values.fileListId || ""}
+                      >
+                        <MenuItem value={""} >{"Nenhum"}</MenuItem>
+                        {file.map(f => (
+                          <MenuItem key={f.id} value={f.id}>
+                            {f.name}
+                          </MenuItem>
+                        ))}
+                      </Field>
+                    </FormControl>
+                  </Grid>
                   <Grid xs={12} item>
                     <Tabs
                       value={messageTab}
                       indicatorColor="primary"
                       textColor="primary"
+                      className={classes.tabmsg}
                       onChange={(e, v) => setMessageTab(v)}
                       variant="fullWidth"
                       centered
                       style={{
-                        background: "#f2f2f2",
-                        border: "1px solid #e6e6e6",
                         borderRadius: 2,
                       }}
                     >
@@ -492,104 +531,19 @@ const CampaignModal = ({
                     </Tabs>
                     <Box style={{ paddingTop: 20, border: "none" }}>
                       {messageTab === 0 && (
-                        <>
-                          {values.confirmation ? (
-                            <Grid spacing={2} container>
-                              <Grid xs={12} md={8} item>
-                                <>{renderMessageField("message1")}</>
-                              </Grid>
-                              <Grid xs={12} md={4} item>
-                                <>
-                                  {renderConfirmationMessageField(
-                                    "confirmationMessage1"
-                                  )}
-                                </>
-                              </Grid>
-                            </Grid>
-                          ) : (
-                            <>{renderMessageField("message1")}</>
-                          )}
-                        </>
+                        <>{renderMessageField("message1")}</>
                       )}
                       {messageTab === 1 && (
-                        <>
-                          {values.confirmation ? (
-                            <Grid spacing={2} container>
-                              <Grid xs={12} md={8} item>
-                                <>{renderMessageField("message2")}</>
-                              </Grid>
-                              <Grid xs={12} md={4} item>
-                                <>
-                                  {renderConfirmationMessageField(
-                                    "confirmationMessage2"
-                                  )}
-                                </>
-                              </Grid>
-                            </Grid>
-                          ) : (
-                            <>{renderMessageField("message2")}</>
-                          )}
-                        </>
+                        <>{renderMessageField("message2")}</>
                       )}
                       {messageTab === 2 && (
-                        <>
-                          {values.confirmation ? (
-                            <Grid spacing={2} container>
-                              <Grid xs={12} md={8} item>
-                                <>{renderMessageField("message3")}</>
-                              </Grid>
-                              <Grid xs={12} md={4} item>
-                                <>
-                                  {renderConfirmationMessageField(
-                                    "confirmationMessage3"
-                                  )}
-                                </>
-                              </Grid>
-                            </Grid>
-                          ) : (
-                            <>{renderMessageField("message3")}</>
-                          )}
-                        </>
+                        <>{renderMessageField("message3")}</>
                       )}
                       {messageTab === 3 && (
-                        <>
-                          {values.confirmation ? (
-                            <Grid spacing={2} container>
-                              <Grid xs={12} md={8} item>
-                                <>{renderMessageField("message4")}</>
-                              </Grid>
-                              <Grid xs={12} md={4} item>
-                                <>
-                                  {renderConfirmationMessageField(
-                                    "confirmationMessage4"
-                                  )}
-                                </>
-                              </Grid>
-                            </Grid>
-                          ) : (
-                            <>{renderMessageField("message4")}</>
-                          )}
-                        </>
+                        <>{renderMessageField("message4")}</>
                       )}
                       {messageTab === 4 && (
-                        <>
-                          {values.confirmation ? (
-                            <Grid spacing={2} container>
-                              <Grid xs={12} md={8} item>
-                                <>{renderMessageField("message5")}</>
-                              </Grid>
-                              <Grid xs={12} md={4} item>
-                                <>
-                                  {renderConfirmationMessageField(
-                                    "confirmationMessage5"
-                                  )}
-                                </>
-                              </Grid>
-                            </Grid>
-                          ) : (
-                            <>{renderMessageField("message5")}</>
-                          )}
-                        </>
+                        <>{renderMessageField("message5")}</>
                       )}
                     </Box>
                   </Grid>

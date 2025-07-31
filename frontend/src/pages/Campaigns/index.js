@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
 
-import React, { useState, useEffect, useReducer } from "react";
+import React, { useState, useEffect, useReducer, useContext } from "react";
 import { toast } from "react-toastify";
 
 import { useHistory } from "react-router-dom";
@@ -38,7 +38,7 @@ import toastError from "../../errors/toastError";
 import { Grid } from "@material-ui/core";
 import { isArray } from "lodash";
 import { useDate } from "../../hooks/useDate";
-import { socketConnection } from "../../services/socket";
+import { SocketContext } from "../../context/Socket/SocketContext";
 
 const reducer = (state, action) => {
   if (action.type === "LOAD_CAMPAIGNS") {
@@ -112,6 +112,8 @@ const Campaigns = () => {
 
   const { datetimeToClient } = useDate();
 
+  const socketManager = useContext(SocketContext);
+
   useEffect(() => {
     dispatch({ type: "RESET" });
     setPageNumber(1);
@@ -128,7 +130,7 @@ const Campaigns = () => {
 
   useEffect(() => {
     const companyId = localStorage.getItem("companyId");
-    const socket = socketConnection({ companyId });
+    const socket = socketManager.getSocket(companyId);
 
     socket.on(`company-${companyId}-campaign`, (data) => {
       if (data.action === "update" || data.action === "create") {
@@ -141,7 +143,7 @@ const Campaigns = () => {
     return () => {
       socket.disconnect();
     };
-  }, []);
+  }, [socketManager]);
 
   const fetchCampaigns = async () => {
     try {
@@ -202,15 +204,15 @@ const Campaigns = () => {
   const formatStatus = (val) => {
     switch (val) {
       case "INATIVA":
-        return "Inativa";
+        return i18n.t("campaigns.status.inactive");
       case "PROGRAMADA":
-        return "Programada";
+        return i18n.t("campaigns.status.programmed");
       case "EM_ANDAMENTO":
-        return "Em Andamento";
+        return i18n.t("campaigns.status.inProgress");
       case "CANCELADA":
-        return "Cancelada";
+        return i18n.t("campaigns.status.canceled");
       case "FINALIZADA":
-        return "Finalizada";
+        return i18n.t("campaigns.status.finished");
       default:
         return val;
     }
@@ -327,9 +329,6 @@ const Campaigns = () => {
                 {i18n.t("campaigns.table.completedAt")}
               </TableCell>
               <TableCell align="center">
-                {i18n.t("campaigns.table.confirmation")}
-              </TableCell>
-              <TableCell align="center">
                 {i18n.t("campaigns.table.actions")}
               </TableCell>
             </TableRow>
@@ -345,31 +344,28 @@ const Campaigns = () => {
                   <TableCell align="center">
                     {campaign.contactListId
                       ? campaign.contactList.name
-                      : "Não definida"}
+                      : i18n.t("campaigns.table.notDefined")}
                   </TableCell>
                   <TableCell align="center">
                     {campaign.whatsappId
                       ? campaign.whatsapp.name
-                      : "Não definido"}
+                      : i18n.t("campaigns.table.notDefined2")}
                   </TableCell>
                   <TableCell align="center">
                     {campaign.scheduledAt
                       ? datetimeToClient(campaign.scheduledAt)
-                      : "Sem agendamento"}
+                      : i18n.t("campaigns.table.notScheduled")}
                   </TableCell>
                   <TableCell align="center">
                     {campaign.completedAt
                       ? datetimeToClient(campaign.completedAt)
-                      : "Não concluída"}
-                  </TableCell>
-                  <TableCell align="center">
-                    {campaign.confirmation ? "Habilitada" : "Desabilitada"}
+                      : i18n.t("campaigns.table.notConcluded")}
                   </TableCell>
                   <TableCell align="center">
                     {campaign.status === "EM_ANDAMENTO" && (
                       <IconButton
                         onClick={() => cancelCampaign(campaign)}
-                        title="Parar Campanha"
+                        title={i18n.t("campaigns.table.stopCampaign")}
                         size="small"
                       >
                         <PauseCircleOutlineIcon />
@@ -378,7 +374,7 @@ const Campaigns = () => {
                     {campaign.status === "CANCELADA" && (
                       <IconButton
                         onClick={() => restartCampaign(campaign)}
-                        title="Parar Campanha"
+                        title={i18n.t("campaigns.table.stopCampaign")}
                         size="small"
                       >
                         <PlayCircleOutlineIcon />

@@ -26,21 +26,24 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
 };
 
 export const store = async (req: Request, res: Response): Promise<Response> => {
-  const { name, color, greetingMessage, outOfHoursMessage, schedules } =
+  const { name, color, greetingMessage, outOfHoursMessage, schedules, orderQueue, integrationId, promptId } =
     req.body;
   const { companyId } = req.user;
-
+  console.log("queue", integrationId, promptId)
   const queue = await CreateQueueService({
     name,
     color,
     greetingMessage,
     companyId,
     outOfHoursMessage,
-    schedules
+    schedules,
+    orderQueue: orderQueue === "" ? null : orderQueue,
+    integrationId: integrationId === "" ? null : integrationId,
+    promptId: promptId === "" ? null : promptId
   });
 
   const io = getIO();
-  io.emit(`company-${companyId}-queue`, {
+  io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-queue`, {
     action: "update",
     queue
   });
@@ -63,11 +66,21 @@ export const update = async (
 ): Promise<Response> => {
   const { queueId } = req.params;
   const { companyId } = req.user;
-
-  const queue = await UpdateQueueService(queueId, req.body, companyId);
+  const { name, color, greetingMessage, outOfHoursMessage, schedules, orderQueue, integrationId, promptId } =
+    req.body;
+  const queue = await UpdateQueueService(queueId, {
+    name,
+    color,
+    greetingMessage,
+    outOfHoursMessage,
+    schedules,
+    orderQueue: orderQueue === "" ? null : orderQueue,
+    integrationId: integrationId === "" ? null : integrationId,
+    promptId: promptId === "" ? null : promptId
+  }, companyId);
 
   const io = getIO();
-  io.emit(`company-${companyId}-queue`, {
+  io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-queue`, {
     action: "update",
     queue
   });
@@ -85,7 +98,7 @@ export const remove = async (
   await DeleteQueueService(queueId, companyId);
 
   const io = getIO();
-  io.emit(`company-${companyId}-queue`, {
+  io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-queue`, {
     action: "delete",
     queueId: +queueId
   });
