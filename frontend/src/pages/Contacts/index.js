@@ -2,7 +2,7 @@ import React, { useState, useEffect, useReducer, useContext } from "react";
 
 import { toast } from "react-toastify";
 import { useHistory } from "react-router-dom";
-import { Tooltip } from "@material-ui/core";
+
 import { makeStyles } from "@material-ui/core/styles";
 import Table from "@material-ui/core/Table";
 import TableBody from "@material-ui/core/TableBody";
@@ -20,6 +20,7 @@ import InputAdornment from "@material-ui/core/InputAdornment";
 import IconButton from "@material-ui/core/IconButton";
 import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
 import EditIcon from "@material-ui/icons/Edit";
+
 import api from "../../services/api";
 import TableRowSkeleton from "../../components/TableRowSkeleton";
 import ContactModal from "../../components/ContactModal";
@@ -34,10 +35,7 @@ import toastError from "../../errors/toastError";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { Can } from "../../components/Can";
 import NewTicketModal from "../../components/NewTicketModal";
-import { SocketContext } from "../../context/Socket/SocketContext";
-
-import {CSVLink} from "react-csv";
-import ImportContactsModal from "../../components/ImportContactsModal";
+import { socketConnection } from "../../services/socket";
 
 const reducer = (state, action) => {
   if (action.type === "LOAD_CONTACTS") {
@@ -109,9 +107,6 @@ const Contacts = () => {
   const [deletingContact, setDeletingContact] = useState(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [hasMore, setHasMore] = useState(false);
-  const [openModalImport, setOpenModalImport] = useState(false);
-
-  const socketManager = useContext(SocketContext);
 
   useEffect(() => {
     dispatch({ type: "RESET" });
@@ -140,7 +135,7 @@ const Contacts = () => {
 
   useEffect(() => {
     const companyId = localStorage.getItem("companyId");
-    const socket = socketManager.getSocket(companyId);
+    const socket = socketConnection({ companyId });
 
     socket.on(`company-${companyId}-contact`, (data) => {
       if (data.action === "update" || data.action === "create") {
@@ -155,7 +150,7 @@ const Contacts = () => {
     return () => {
       socket.disconnect();
     };
-  }, [ socketManager]);
+  }, []);
 
   const handleSearch = (event) => {
     setSearchParam(event.target.value.toLowerCase());
@@ -220,10 +215,6 @@ const Contacts = () => {
     }
   };
 
-  const handleOpenImportModal = (  ) => {
-    setOpenModalImport(true);
-  }
-
   const loadMore = () => {
     setPageNumber((prevState) => prevState + 1);
   };
@@ -236,16 +227,8 @@ const Contacts = () => {
     }
   };
 
-  const handleCloseModalImport = (  ) => {
-    setOpenModalImport(false);
-  }
-
   return (
     <MainContainer className={classes.mainContainer}>
-      <ImportContactsModal
-        open={openModalImport}
-        onClose={handleCloseModalImport}
-      />
       <NewTicketModal
         modalOpen={newTicketModalOpen}
         initialContact={contactTicket}
@@ -295,17 +278,10 @@ const Contacts = () => {
               ),
             }}
           />
-          {/*<Button
-            variant="contained"
-            color="primary"
-            onClick={(e) => setConfirmOpen(true)}
-          >
-            {i18n.t("contacts.buttons.import")}
-          </Button>*/}
           <Button
             variant="contained"
             color="primary"
-            onClick={handleOpenImportModal}
+            onClick={(e) => setConfirmOpen(true)}
           >
             {i18n.t("contacts.buttons.import")}
           </Button>
@@ -316,12 +292,6 @@ const Contacts = () => {
           >
             {i18n.t("contacts.buttons.add")}
           </Button>
-         <CSVLink style={{ textDecoration:'none'}} separator=";" filename={'contatos.csv'} data={contacts.map((contact) => ({ name: contact.name, number: contact.number, email: contact.email }))}>
-          <Button	variant="contained" color="primary"> 
-            {i18n.t("contacts.buttons.export")}
-          </Button>
-          </CSVLink>		  
-
         </MainHeaderButtonsWrapper>
       </MainHeader>
       <Paper

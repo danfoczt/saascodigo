@@ -26,24 +26,21 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
 };
 
 export const store = async (req: Request, res: Response): Promise<Response> => {
-  const { name, color, greetingMessage, outOfHoursMessage, schedules, orderQueue, integrationId, promptId } =
+  const { name, color, greetingMessage, outOfHoursMessage, schedules } =
     req.body;
   const { companyId } = req.user;
-  console.log("queue", integrationId, promptId)
+
   const queue = await CreateQueueService({
     name,
     color,
     greetingMessage,
     companyId,
     outOfHoursMessage,
-    schedules,
-    orderQueue: orderQueue === "" ? null : orderQueue,
-    integrationId: integrationId === "" ? null : integrationId,
-    promptId: promptId === "" ? null : promptId
+    schedules
   });
 
   const io = getIO();
-  io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-queue`, {
+  io.emit(`company-${companyId}-queue`, {
     action: "update",
     queue
   });
@@ -66,21 +63,11 @@ export const update = async (
 ): Promise<Response> => {
   const { queueId } = req.params;
   const { companyId } = req.user;
-  const { name, color, greetingMessage, outOfHoursMessage, schedules, orderQueue, integrationId, promptId } =
-    req.body;
-  const queue = await UpdateQueueService(queueId, {
-    name,
-    color,
-    greetingMessage,
-    outOfHoursMessage,
-    schedules,
-    orderQueue: orderQueue === "" ? null : orderQueue,
-    integrationId: integrationId === "" ? null : integrationId,
-    promptId: promptId === "" ? null : promptId
-  }, companyId);
+
+  const queue = await UpdateQueueService(queueId, req.body, companyId);
 
   const io = getIO();
-  io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-queue`, {
+  io.emit(`company-${companyId}-queue`, {
     action: "update",
     queue
   });
@@ -98,7 +85,7 @@ export const remove = async (
   await DeleteQueueService(queueId, companyId);
 
   const io = getIO();
-  io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-queue`, {
+  io.emit(`company-${companyId}-queue`, {
     action: "delete",
     queueId: +queueId
   });

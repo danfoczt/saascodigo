@@ -7,8 +7,7 @@ import ffmpegPath from "@ffmpeg-installer/ffmpeg";
 import AppError from "../../errors/AppError";
 import GetTicketWbot from "../../helpers/GetTicketWbot";
 import Ticket from "../../models/Ticket";
-import { lookup } from "mime-types";
-import formatBody from "../../helpers/Mustache";
+import mime from "mime-types";
 
 interface Request {
   media: Express.Multer.File;
@@ -48,10 +47,9 @@ const processAudioFile = async (audio: string): Promise<string> => {
 
 export const getMessageOptions = async (
   fileName: string,
-  pathMedia: string,
-  body?: string
+  pathMedia: string
 ): Promise<any> => {
-  const mimeType = lookup(pathMedia) || "";
+  const mimeType = mime.lookup(pathMedia);
   const typeMessage = mimeType.split("/")[0];
 
   try {
@@ -63,46 +61,44 @@ export const getMessageOptions = async (
     if (typeMessage === "video") {
       options = {
         video: fs.readFileSync(pathMedia),
-        caption: body ? body : "",
+        // caption: fileName,
         fileName: fileName
         // gifPlayback: true
       };
     } else if (typeMessage === "audio") {
-      const typeAudio = true; //fileName.includes("audio-record-site");
+      const typeAudio = fileName.includes("audio-record-site");
       const convert = await processAudio(pathMedia);
       if (typeAudio) {
         options = {
           audio: fs.readFileSync(convert),
           mimetype: typeAudio ? "audio/mp4" : mimeType,
-          caption: body ? body : null,
           ptt: true
         };
       } else {
         options = {
           audio: fs.readFileSync(convert),
           mimetype: typeAudio ? "audio/mp4" : mimeType,
-          caption: body ? body : null,
           ptt: true
         };
       }
     } else if (typeMessage === "document") {
       options = {
         document: fs.readFileSync(pathMedia),
-        caption: body ? body : null,
+        caption: fileName,
         fileName: fileName,
         mimetype: mimeType
       };
     } else if (typeMessage === "application") {
       options = {
         document: fs.readFileSync(pathMedia),
-        caption: body ? body : null,
+        caption: fileName,
         fileName: fileName,
         mimetype: mimeType
       };
     } else {
       options = {
         image: fs.readFileSync(pathMedia),
-        caption: body ? body : null
+        caption: fileName
       };
     }
 
@@ -125,12 +121,11 @@ const SendWhatsAppMedia = async ({
     const pathMedia = media.path;
     const typeMessage = media.mimetype.split("/")[0];
     let options: AnyMessageContent;
-    const bodyMessage = formatBody(body, ticket.contact);
 
     if (typeMessage === "video") {
       options = {
         video: fs.readFileSync(pathMedia),
-        caption: bodyMessage,
+        caption: body,
         fileName: media.originalname
         // gifPlayback: true
       };
@@ -153,21 +148,21 @@ const SendWhatsAppMedia = async ({
     } else if (typeMessage === "document" || typeMessage === "text") {
       options = {
         document: fs.readFileSync(pathMedia),
-        caption: bodyMessage,
+        caption: body,
         fileName: media.originalname,
         mimetype: media.mimetype
       };
-    } else if (typeMessage === "application") {
+     } else if (typeMessage === "application") {
       options = {
         document: fs.readFileSync(pathMedia),
-        caption: bodyMessage,
+        caption: body,
         fileName: media.originalname,
         mimetype: media.mimetype
       };
     } else {
       options = {
         image: fs.readFileSync(pathMedia),
-        caption: bodyMessage
+        caption: body
       };
     }
 
@@ -178,7 +173,7 @@ const SendWhatsAppMedia = async ({
       }
     );
 
-    await ticket.update({ lastMessage: bodyMessage });
+    await ticket.update({ lastMessage: media.filename });
 
     return sentMessage;
   } catch (err) {

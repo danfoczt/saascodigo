@@ -42,6 +42,9 @@ class Message extends Model<Message> {
   @Column
   fromMe: boolean;
 
+  @Column({ defaultValue: "whatsapp" })
+  channel: string;
+
   @Column(DataType.TEXT)
   body: string;
 
@@ -104,10 +107,6 @@ class Message extends Model<Message> {
 
   @BelongsTo(() => Queue)
   queue: Queue;
-  
-  @Default(false)
-  @Column
-  isEdited: boolean;
 }
 
 export default Message;

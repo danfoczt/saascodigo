@@ -26,12 +26,8 @@ import announcementRoutes from "./announcementRoutes";
 import chatRoutes from "./chatRoutes";
 import invoiceRoutes from "./invoicesRoutes";
 import subscriptionRoutes from "./subScriptionRoutes";
-import ticketTagRoutes from "./ticketTagRoutes";
-import filesRoutes from "./filesRoutes";
-import promptRoutes from "./promptRouter";
-import queueIntegrationRoutes from "./queueIntegrationRoutes";
-import forgotsRoutes from "./forgotPasswordRoutes";
-import versionRouter from "./versionRoutes";
+import webHookMetaRoutes from "./WebHookMetaRoutes";
+
 const routes = Router();
 
 routes.use(userRoutes);
@@ -61,11 +57,7 @@ routes.use(announcementRoutes);
 routes.use(chatRoutes);
 routes.use(subscriptionRoutes);
 routes.use(invoiceRoutes);
-routes.use(ticketTagRoutes);
-routes.use(filesRoutes);
-routes.use(promptRoutes);
-routes.use(queueIntegrationRoutes);
-routes.use(forgotsRoutes);
-routes.use(versionRouter);
+routes.use("/webhook/fb", webHookMetaRoutes);
+
 
 export default routes;

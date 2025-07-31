@@ -20,13 +20,12 @@ import {
 } from "@material-ui/core";
 import api from "../../services/api";
 import { isArray } from "lodash";
-import { SocketContext } from "../../context/Socket/SocketContext";
+import { socketConnection } from "../../services/socket";
 import { useDate } from "../../hooks/useDate";
 import { AuthContext } from "../../context/Auth/AuthContext";
 
 import notifySound from "../../assets/chat_notify.mp3";
 import useSound from "use-sound";
-import { i18n } from "../../translate/i18n";
 
 const useStyles = makeStyles((theme) => ({
   mainPaper: {
@@ -111,8 +110,6 @@ export default function ChatPopover() {
   const [play] = useSound(notifySound);
   const soundAlertRef = useRef();
 
-  const socketManager = useContext(SocketContext);
-
   useEffect(() => {
     soundAlertRef.current = play;
 
@@ -139,17 +136,12 @@ export default function ChatPopover() {
 
   useEffect(() => {
     const companyId = localStorage.getItem("companyId");
-    const socket = socketManager.getSocket(companyId);
-    if (!socket) {
-      return () => {}; 
-    }
-    
+    const socket = socketConnection({ companyId });
+
     socket.on(`company-${companyId}-chat`, (data) => {
       if (data.action === "new-message") {
         dispatch({ type: "CHANGE_CHAT", payload: data });
-        const userIds = data.newMessage.chat.users.map(userObj => userObj.userId);
-
-        if (userIds.includes(user.id) && data.newMessage.senderId !== user.id) {
+        if (data.newMessage.senderId !== user.id) {
           soundAlertRef.current();
         }
       }
@@ -160,7 +152,8 @@ export default function ChatPopover() {
     return () => {
       socket.disconnect();
     };
-  }, [socketManager, user.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     let unreadsCount = 0;
@@ -228,7 +221,6 @@ export default function ChatPopover() {
         variant="contained"
         color={invisible ? "default" : "inherit"}
         onClick={handleClick}
-        style={{ color: "white" }}
       >
         <Badge color="secondary" variant="dot" invisible={invisible}>
           <ForumIcon />
@@ -284,7 +276,7 @@ export default function ChatPopover() {
                 </ListItem>
               ))}
             {isArray(chats) && chats.length === 0 && (
-              <ListItemText primary={i18n.t("mainDrawer.appBar.notRegister")} />
+              <ListItemText primary="Nenhum registro" />
             )}
           </List>
         </Paper>

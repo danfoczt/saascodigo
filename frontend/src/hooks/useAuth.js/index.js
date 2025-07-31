@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect } from "react";
 import { useHistory } from "react-router-dom";
 import { has, isArray } from "lodash";
 
@@ -7,7 +7,7 @@ import { toast } from "react-toastify";
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
-import { SocketContext } from "../../context/Socket/SocketContext";
+import { socketConnection } from "../../services/socket";
 import moment from "moment";
 const useAuth = () => {
   const history = useHistory();
@@ -29,79 +29,31 @@ const useAuth = () => {
     }
   );
 
-  let isRefreshing = false;
-  let failedRequestsQueue = [];
-
   api.interceptors.response.use(
     (response) => {
       return response;
     },
     async (error) => {
       const originalRequest = error.config;
-
       if (error?.response?.status === 403 && !originalRequest._retry) {
-        if (isRefreshing) {
-          return new Promise((resolve, reject) => {
-            failedRequestsQueue.push({ resolve, reject });
-          })
-            .then((token) => {
-              originalRequest.headers.Authorization = `Bearer ${token}`;
-              return api(originalRequest);
-            })
-            .catch((err) => {
-              return Promise.reject(err);
-            });
-        }
-
         originalRequest._retry = true;
-        isRefreshing = true;
 
-        try {
-          const { data } = await api.post("/auth/refresh_token");
-
-          if (data) {
-            localStorage.setItem("token", JSON.stringify(data.token));
-            api.defaults.headers.Authorization = `Bearer ${data.token}`;
-
-            failedRequestsQueue.forEach((request) => {
-              request.resolve(data.token);
-            });
-            failedRequestsQueue = [];
-          }
-
-          return api(originalRequest);
-        } catch (refreshError) {
-          failedRequestsQueue.forEach((request) => {
-            request.reject(refreshError);
-          });
-          failedRequestsQueue = [];
-
-          localStorage.removeItem("token");
-          localStorage.removeItem("companyId");
-          api.defaults.headers.Authorization = undefined;
-          setIsAuth(false);
-
-          return Promise.reject(refreshError);
-        } finally {
-          isRefreshing = false;
+        const { data } = await api.post("/auth/refresh_token");
+        if (data) {
+          localStorage.setItem("token", JSON.stringify(data.token));
+          api.defaults.headers.Authorization = `Bearer ${data.token}`;
         }
+        return api(originalRequest);
       }
-
-      if (
-        error?.response?.status === 401 ||
-        (error?.response?.status === 403 && originalRequest._retry)
-      ) {
+      if (error?.response?.status === 401) {
         localStorage.removeItem("token");
         localStorage.removeItem("companyId");
         api.defaults.headers.Authorization = undefined;
         setIsAuth(false);
       }
-
       return Promise.reject(error);
     }
   );
-
-  const socketManager = useContext(SocketContext);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -122,20 +74,19 @@ const useAuth = () => {
 
   useEffect(() => {
     const companyId = localStorage.getItem("companyId");
-    if (companyId) {
-      const socket = socketManager.getSocket(companyId);
+    const socket = socketConnection({ companyId });
 
-      socket.on(`company-${companyId}-user`, (data) => {
-        if (data.action === "update" && data.user.id === user.id) {
-          setUser(data.user);
-        }
-      });
+    socket.on(`company-${companyId}-user`, (data) => {
+      if (data.action === "update" && data.user.id === user.id) {
+        setUser(data.user);
+      }
+    });
 
-      return () => {
-        socket.disconnect();
-      };
-    }
-  }, [socketManager, user]);
+    return () => {
+      socket.disconnect();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   const handleLogin = async (userData) => {
     setLoading(true);
@@ -155,15 +106,16 @@ const useAuth = () => {
         }
       }
 
-      moment.locale("pt-br");
+      moment.locale('pt-br');
       const dueDate = data.user.company.dueDate;
       const hoje = moment(moment()).format("DD/MM/yyyy");
       const vencimento = moment(dueDate).format("DD/MM/yyyy");
-
+      
       var diff = moment(dueDate).diff(moment(moment()).format());
 
       var before = moment(moment().format()).isBefore(dueDate);
       var dias = moment.duration(diff).asDays();
+      var diasVenc = vencimento.valueOf() - hoje.valueOf()
 
       if (before === true) {
         localStorage.setItem("token", JSON.stringify(data.token));
@@ -175,11 +127,7 @@ const useAuth = () => {
         setIsAuth(true);
         toast.success(i18n.t("auth.toasts.success"));
         if (Math.round(dias) < 5) {
-          toast.warn(
-            `Sua assinatura vence em ${Math.round(dias)} ${
-              Math.round(dias) === 1 ? "dia" : "dias"
-            } `
-          );
+          toast.warn(`Sua assinatura vence em ${Math.round(dias)} ${Math.round(dias) === 1 ? 'dia' : 'dias'} `);
         }
         history.push("/tickets");
         setLoading(false);
@@ -189,7 +137,7 @@ Entre em contato com o Suporte para mais informações! `);
         setLoading(false);
       }
 
-      //quebra linha
+      //quebra linha 
     } catch (err) {
       toastError(err);
       setLoading(false);

@@ -5,13 +5,15 @@ import User from "../../models/User";
 import Queue from "../../models/Queue";
 import Tag from "../../models/Tag";
 import Whatsapp from "../../models/Whatsapp";
-import Prompt from "../../models/Prompt";
 
 const ShowTicketService = async (
   id: string | number,
   companyId: number
 ): Promise<Ticket> => {
-  const ticket = await Ticket.findByPk(id, {
+  const ticket = await Ticket.findOne({
+    where: {
+      id
+    },
     include: [
       {
         model: Contact,
@@ -27,13 +29,12 @@ const ShowTicketService = async (
       {
         model: Queue,
         as: "queue",
-        attributes: ["id", "name", "color"],
-        include: ["prompt", "queueIntegrations"]
+        attributes: ["id", "name", "color"]
       },
       {
         model: Whatsapp,
         as: "whatsapp",
-        attributes: ["name"]
+        attributes: ["name", "facebookUserToken", "facebookUserId"]
       },
       {
         model: Tag,

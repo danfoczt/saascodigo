@@ -1,5 +1,5 @@
 import { proto, WASocket } from "@whiskeysockets/baileys";
-// import cacheLayer from "../libs/cache";
+import { cacheLayer } from "../libs/cache";
 import { getIO } from "../libs/socket";
 import Message from "../models/Message";
 import Ticket from "../models/Ticket";
@@ -8,7 +8,7 @@ import GetTicketWbot from "./GetTicketWbot";
 
 const SetTicketMessagesAsRead = async (ticket: Ticket): Promise<void> => {
   await ticket.update({ unreadMessages: 0 });
-  // await cacheLayer.set(`contacts:${ticket.contactId}:unreads`, "0");
+  await cacheLayer.set(`contacts:${ticket.contactId}:unreads`, "0");
 
   try {
     const wbot = await GetTicketWbot(ticket);
@@ -47,13 +47,14 @@ const SetTicketMessagesAsRead = async (ticket: Ticket): Promise<void> => {
       }
     );
   } catch (err) {
+    console.log(err);
     logger.warn(
       `Could not mark messages as read. Maybe whatsapp session disconnected? Err: ${err}`
     );
   }
 
   const io = getIO();
-  io.to(`company-${ticket.companyId}-mainchannel`).emit(`company-${ticket.companyId}-ticket`, {
+  io.to(ticket.status).to("notification").emit("ticket", {
     action: "updateUnread",
     ticketId: ticket.id
   });

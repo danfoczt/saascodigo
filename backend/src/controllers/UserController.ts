@@ -10,8 +10,6 @@ import UpdateUserService from "../services/UserServices/UpdateUserService";
 import ShowUserService from "../services/UserServices/ShowUserService";
 import DeleteUserService from "../services/UserServices/DeleteUserService";
 import SimpleListService from "../services/UserServices/SimpleListService";
-import User from "../models/User";
-import SetLanguageCompanyService from "../services/UserServices/SetLanguageCompanyService";
 
 type IndexQuery = {
   searchParam: string;
@@ -43,30 +41,22 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     name,
     profile,
     companyId: bodyCompanyId,
-    queueIds,
-    whatsappId,
-	allTicket
+    queueIds
   } = req.body;
   let userCompanyId: number | null = null;
-
-  let requestUser: User = null;
 
   if (req.user !== undefined) {
     const { companyId: cId } = req.user;
     userCompanyId = cId;
-    requestUser = await User.findByPk(req.user.id);
   }
 
-  const newUserCompanyId = bodyCompanyId || userCompanyId;
-
-  if (req.url === "/signup") {
-    if (await CheckSettingsHelper("userCreation") === "disabled") {
-      throw new AppError("ERR_USER_CREATION_DISABLED", 403);
-    }
-  } else if (req.user?.profile !== "admin") {
+  if (
+    req.url === "/signup" &&
+    (await CheckSettingsHelper("userCreation")) === "disabled"
+  ) {
+    throw new AppError("ERR_USER_CREATION_DISABLED", 403);
+  } else if (req.url !== "/signup" && req.user.profile !== "admin") {
     throw new AppError("ERR_NO_PERMISSION", 403);
-  } else if (newUserCompanyId !== req.user?.companyId && !requestUser?.super) {
-    throw new AppError("ERR_NO_SUPER", 403);
   }
 
   const user = await CreateUserService({
@@ -74,14 +64,12 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     password,
     name,
     profile,
-    companyId: newUserCompanyId,
-    queueIds,
-    whatsappId,
-	allTicket
+    companyId: bodyCompanyId || userCompanyId,
+    queueIds
   });
 
   const io = getIO();
-  io.to(`company-${userCompanyId}-mainchannel`).emit(`company-${userCompanyId}-user`, {
+  io.emit(`company-${userCompanyId}-user`, {
     action: "create",
     user
   });
@@ -117,7 +105,7 @@ export const update = async (
   });
 
   const io = getIO();
-  io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-user`, {
+  io.emit(`company-${companyId}-user`, {
     action: "update",
     user
   });
@@ -139,7 +127,7 @@ export const remove = async (
   await DeleteUserService(userId, companyId);
 
   const io = getIO();
-  io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-user`, {
+  io.emit(`company-${companyId}-user`, {
     action: "delete",
     userId
   });
@@ -157,15 +145,3 @@ export const list = async (req: Request, res: Response): Promise<Response> => {
 
   return res.status(200).json(users);
 };
-
-export const setLanguage = async (req: Request, res: Response): Promise<Response> => {
-  const { companyId } = req.user;
-  const {newLanguage} = req.params;
-
-  if( newLanguage !== "pt" && newLanguage !== "en" && newLanguage !== "es" )
-    throw new AppError("ERR_INTERNAL_SERVER_ERROR", 500);
-
-  await SetLanguageCompanyService( companyId, newLanguage );
-
-  return res.status(200).json({message: "Language updated successfully"});
-}

@@ -12,7 +12,6 @@ import AppError from "./errors/AppError";
 import routes from "./routes";
 import { logger } from "./utils/logger";
 import { messageQueue, sendScheduledMessages } from "./queues";
-import bodyParser from 'body-parser';
 
 Sentry.init({ dsn: process.env.SENTRY_DSN });
 
@@ -22,9 +21,6 @@ app.set("queues", {
   messageQueue,
   sendScheduledMessages
 });
-
-const bodyparser = require('body-parser');
-app.use(bodyParser.json({ limit: '10mb' }));
 
 app.use(
   cors({
@@ -41,14 +37,13 @@ app.use(routes);
 app.use(Sentry.Handlers.errorHandler());
 
 app.use(async (err: Error, req: Request, res: Response, _: NextFunction) => {
-
   if (err instanceof AppError) {
     logger.warn(err);
     return res.status(err.statusCode).json({ error: err.message });
   }
 
   logger.error(err);
-  return res.status(500).json({ error: "ERR_INTERNAL_SERVER_ERROR" });
+  return res.status(500).json({ error: "Internal server error" });
 });
 
 export default app;

@@ -1,6 +1,4 @@
 import React, { useState, useEffect, useReducer } from "react";
-import { toast } from "react-toastify";
-
 import { makeStyles } from "@material-ui/core/styles";
 import Paper from "@material-ui/core/Paper";
 import Button from "@material-ui/core/Button";
@@ -9,24 +7,13 @@ import TableBody from "@material-ui/core/TableBody";
 import TableCell from "@material-ui/core/TableCell";
 import TableHead from "@material-ui/core/TableHead";
 import TableRow from "@material-ui/core/TableRow";
-import IconButton from "@material-ui/core/IconButton";
-import SearchIcon from "@material-ui/icons/Search";
-import TextField from "@material-ui/core/TextField";
-import InputAdornment from "@material-ui/core/InputAdornment";
-
-import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
-import EditIcon from "@material-ui/icons/Edit";
-
 import MainContainer from "../../components/MainContainer";
 import MainHeader from "../../components/MainHeader";
-import MainHeaderButtonsWrapper from "../../components/MainHeaderButtonsWrapper";
 import Title from "../../components/Title";
 import SubscriptionModal from "../../components/SubscriptionModal";
 import api from "../../services/api";
-import { i18n } from "../../translate/i18n";
 import TableRowSkeleton from "../../components/TableRowSkeleton";
-import UserModal from "../../components/UserModal";
-import ConfirmationModal from "../../components/ConfirmationModal";
+
 import toastError from "../../errors/toastError";
 
 import moment from "moment";
@@ -90,7 +77,7 @@ const Invoices = () => {
   const [loading, setLoading] = useState(false);
   const [pageNumber, setPageNumber] = useState(1);
   const [hasMore, setHasMore] = useState(false);
-  const [searchParam, setSearchParam] = useState("");
+  const [searchParam, ] = useState("");
   const [invoices, dispatch] = useReducer(reducer, []);
   const [storagePlans, setStoragePlans] = React.useState([]);
   const [selectedContactId, setSelectedContactId] = useState(null);
@@ -162,12 +149,12 @@ const Invoices = () => {
     var dias = moment.duration(diff).asDays();    
     const status = record.status;
     if (status === "paid") {
-      return i18n.t("invoices.paid");
+      return "Pago";
     }
     if (dias < 0) {
-      return i18n.t("invoices.expired");
+      return "Vencido";
     } else {
-      return i18n.t("invoices.open");
+      return "Em Aberto"
     }
 
   }
@@ -183,7 +170,7 @@ const Invoices = () => {
 
       ></SubscriptionModal>
       <MainHeader>
-        <Title>{i18n.t("invoices.title")}</Title>
+        <Title>Faturas</Title>
       </MainHeader>
       <Paper
         className={classes.mainPaper}
@@ -194,11 +181,11 @@ const Invoices = () => {
           <TableHead>
             <TableRow>
               <TableCell align="center">Id</TableCell>
-              <TableCell align="center">{i18n.t("invoices.details")}</TableCell>
-              <TableCell align="center">{i18n.t("invoices.value")}</TableCell>
-              <TableCell align="center">{i18n.t("invoices.dueDate")}</TableCell>
-              <TableCell align="center">{i18n.t("invoices.status")}</TableCell>
-              <TableCell align="center">{i18n.t("invoices.action")}</TableCell>
+              <TableCell align="center">Detalhes</TableCell>
+              <TableCell align="center">Valor</TableCell>
+              <TableCell align="center">Data Venc.</TableCell>
+              <TableCell align="center">Status</TableCell>
+              <TableCell align="center">Ação</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -211,14 +198,14 @@ const Invoices = () => {
                   <TableCell align="center">{moment(invoices.dueDate).format("DD/MM/YYYY")}</TableCell>
                   <TableCell style={{ fontWeight: 'bold' }} align="center">{rowStatus(invoices)}</TableCell>
                   <TableCell align="center">
-                    {rowStatus(invoices) !== i18n.t("invoices.paid") ?
+                    {rowStatus(invoices) !== "Pago" ?
                       <Button
                         size="small"
                         variant="outlined"
                         color="secondary"
                         onClick={() => handleOpenContactModal(invoices)}
                       >
-                        {i18n.t("invoices.PAY")}
+                        PAGAR
                       </Button> :
                       <Button
                         size="small"
@@ -226,7 +213,7 @@ const Invoices = () => {
                         /* color="secondary"
                         disabled */
                       >
-                        {i18n.t("invoices.PAID")}
+                        PAGO 
                       </Button>}
 
                   </TableCell>

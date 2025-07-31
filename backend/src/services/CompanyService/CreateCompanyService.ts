@@ -3,7 +3,6 @@ import AppError from "../../errors/AppError";
 import Company from "../../models/Company";
 import User from "../../models/User";
 import Setting from "../../models/Setting";
-import { hash } from "bcryptjs";
 
 interface CompanyData {
   name: string;
@@ -26,10 +25,10 @@ const CreateCompanyService = async (
     email,
     status,
     planId,
+    password,
     campaignsEnabled,
     dueDate,
-    recurrence,
-    password
+    recurrence
   } = companyData;
 
   const companySchema = Yup.object().shape({
@@ -67,17 +66,20 @@ const CreateCompanyService = async (
     dueDate,
     recurrence
   });
-
-  const passwordHash = await hash(password || "123456", 8);
-
-  await User.create({
-    name: company.name,
-    email: company.email,
-    password: password,
-    passwordHash,
-    profile: "admin",
-    companyId: company.id
+  const [user, created] = await User.findOrCreate({
+    where: { name, email },
+    defaults: {
+      name: name,
+      email: email,
+      password: password || "mudar123",
+      profile: "admin",
+      companyId: company.id
+    }
   });
+
+  if (!created) {
+    await user.update({ companyId: company.id });
+  }
 
   await Setting.findOrCreate({
     where: {
@@ -195,33 +197,6 @@ const CreateCompanyService = async (
     },
   });
 
-
- // Enviar mensagem ao aceitar ticket
-    await Setting.findOrCreate({
-	where:{
-      companyId: company.id,
-      key: "sendGreetingAccepted",
-    },
-    defaults: {
-      companyId: company.id,
-      key: "sendGreetingAccepted",
-      value: "disabled"
-    },
-  });
-
- // Enviar mensagem de transferencia
-    await Setting.findOrCreate({
-	where:{
-      companyId: company.id,
-      key: "sendMsgTransfTicket",
-    },
-    defaults: {
-      companyId: company.id,
-      key: "sendMsgTransfTicket",
-      value: "disabled"
-    },
- });
-
   //userRating
   await Setting.findOrCreate({
     where: {
@@ -245,43 +220,6 @@ const CreateCompanyService = async (
       companyId: company.id,
       key: "chatBotType",
       value: "text"
-    },
-
-  });
-
-  await Setting.findOrCreate({
-    where: {
-      companyId: company.id,
-      key: "tokensgp"
-    },
-    defaults: {
-      companyId: company.id,
-      key: "tokensgp",
-      value: ""
-    },
-  });
-
-  await Setting.findOrCreate({
-    where: {
-      companyId: company.id,
-      key: "ipsgp"
-    },
-    defaults: {
-      companyId: company.id,
-      key: "ipsgp",
-      value: ""
-    },
-  });
-
-  await Setting.findOrCreate({
-    where: {
-      companyId: company.id,
-      key: "appsgp"
-    },
-    defaults: {
-      companyId: company.id,
-      key: "appsgp",
-      value: ""
     },
   });
 

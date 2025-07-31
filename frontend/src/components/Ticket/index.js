@@ -17,8 +17,7 @@ import { ReplyMessageProvider } from "../../context/ReplyingMessage/ReplyingMess
 import toastError from "../../errors/toastError";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { TagsContainer } from "../TagsContainer";
-import { SocketContext } from "../../context/Socket/SocketContext";
-import { i18n } from "../../translate/i18n";
+import { socketConnection } from "../../services/socket";
 
 const drawerWidth = 320;
 
@@ -62,30 +61,27 @@ const Ticket = () => {
   const history = useHistory();
   const classes = useStyles();
 
-  const { user } = useContext(AuthContext);
+  // const { user } = useContext(AuthContext);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [contact, setContact] = useState({});
   const [ticket, setTicket] = useState({});
-
-  const socketManager = useContext(SocketContext);
+  const [tags, setTags] = useState(null);
 
   useEffect(() => {
     setLoading(true);
     const delayDebounceFn = setTimeout(() => {
       const fetchTicket = async () => {
         try {
-          const { data } = await api.get("/tickets/u/" + ticketId);
-          const { queueId } = data;
-          const { queues, profile } = user;
 
-          const queueAllowed = queues.find((q) => q.id === queueId);
-          if (queueAllowed === undefined && profile !== "admin") {
-            toast.error(i18n.t("tickets.toasts.unauthorized"));
-            history.push("/tickets");
-            return;
-          }
+          const ticketIdNew = ticketId ? ticketId : ticket.id;
+
+          if(!ticketIdNew) return;
+
+          const { data } = await api.get("/tickets/u/" + ticketIdNew);
+
+    
 
           setContact(data.contact);
           setTicket(data);
@@ -98,21 +94,21 @@ const Ticket = () => {
       fetchTicket();
     }, 500);
     return () => clearTimeout(delayDebounceFn);
-  }, [ticketId, user, history]);
+  }, [ticketId, history]);
 
   useEffect(() => {
     const companyId = localStorage.getItem("companyId");
-    const socket = socketManager.getSocket(companyId);
+    const socket = socketConnection({ companyId });
 
-    socket.on("ready", () => socket.emit("joinChatBox", `${ticket.id}`));
+    socket.on("connect", () => socket.emit("joinChatBox", `${ticket.id}`));
 
     socket.on(`company-${companyId}-ticket`, (data) => {
-      if (data.action === "update" && data.ticket.id === ticket.id) {
+      if (data.action === "update") {
         setTicket(data.ticket);
       }
 
-      if (data.action === "delete" && data.ticketId === ticket.id) {
-        // toast.success("Ticket deleted sucessfully.");
+      if (data.action === "delete") {
+        toast.success("Ticket deleted sucessfully.");
         history.push("/tickets");
       }
     });
@@ -131,7 +127,7 @@ const Ticket = () => {
     return () => {
       socket.disconnect();
     };
-  }, [ticketId, ticket, history, socketManager]);
+  }, [ticketId, ticket, history]);
 
   const handleDrawerOpen = () => {
     setDrawerOpen(true);
@@ -165,7 +161,9 @@ const Ticket = () => {
       </>
     );
   };
-
+  const handleTicketUpdateTags = (tagsValue) => {
+    setTags(tagsValue)
+  }
   return (
     <div className={classes.root} id="drawer-container">
       <Paper
@@ -177,10 +175,10 @@ const Ticket = () => {
       >
         <TicketHeader loading={loading}>
           {renderTicketInfo()}
-          <TicketActionButtons ticket={ticket} />
+          <TicketActionButtons ticket={ticket}  onTicketUpdate={handleTicketUpdateTags}/>
         </TicketHeader>
         <Paper>
-          <TagsContainer ticket={ticket} />
+          <TagsContainer ticket={ticket} dataTags={tags} />
         </Paper>
         <ReplyMessageProvider>{renderMessagesList()}</ReplyMessageProvider>
       </Paper>

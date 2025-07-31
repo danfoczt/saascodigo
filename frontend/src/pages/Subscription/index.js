@@ -12,7 +12,6 @@ import Title from "../../components/Title";
 import MainContainer from "../../components/MainContainer";
 
 import { AuthContext } from "../../context/Auth/AuthContext";
-import { i18n } from "../../translate/i18n";
 
 const useStyles = makeStyles((theme) => ({
   mainPaper: {
@@ -75,7 +74,7 @@ const Contacts = () => {
       ></SubscriptionModal>
 
       <MainHeader>
-        <Title>{i18n.t("subscription.title")}</Title>
+        <Title>Assinatura</Title>
       </MainHeader>
       <Grid item xs={12} sm={4}>
         <Paper
@@ -87,8 +86,8 @@ const Contacts = () => {
           <div>
             <TextField
               id="outlined-full-width"
-              label={i18n.t("subscription.testPeriod")}
-              defaultValue={`${i18n.t("subscription.remainingTest")} ${_formatDate(user?.company?.trialExpiration)} ${i18n.t("subscription.remainingTest2")}`}
+              label="Período de teste"
+              defaultValue={`Seu período de teste termina em ${_formatDate(user?.company?.trialExpiration)} dias!`}
               fullWidth
               margin="normal"
               InputLabelProps={{
@@ -105,7 +104,7 @@ const Contacts = () => {
           <div>
             <TextField
               id="outlined-full-width"
-              label={i18n.t("subscription.chargeEmail")}
+              label="Email de cobrança"
               defaultValue={user?.company?.email}
               fullWidth
               margin="normal"
@@ -127,7 +126,7 @@ const Contacts = () => {
               onClick={handleOpenContactModal}
               fullWidth
             >
-              {i18n.t("subscription.signNow")}
+              Assine Agora!
             </Button>
           </div>
 

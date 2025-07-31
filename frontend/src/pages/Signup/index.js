@@ -14,7 +14,6 @@ import TextField from "@material-ui/core/TextField";
 import Link from "@material-ui/core/Link";
 import Grid from "@material-ui/core/Grid";
 import Box from "@material-ui/core/Box";
-import InputMask from 'react-input-mask';
 import {
 	FormControl,
 	InputLabel,
@@ -25,24 +24,25 @@ import LockOutlinedIcon from "@material-ui/icons/LockOutlined";
 import Typography from "@material-ui/core/Typography";
 import { makeStyles } from "@material-ui/core/styles";
 import Container from "@material-ui/core/Container";
-import logo from "../../assets/logo.png";
+
 import { i18n } from "../../translate/i18n";
 
 import { openApi } from "../../services/api";
 import toastError from "../../errors/toastError";
 import moment from "moment";
-const Copyright = () => {
-	return (
-		<Typography variant="body2" color="textSecondary" align="center">
-			{"Copyright © "}
-			<Link color="inherit" href="#">
-				PLW
-			</Link>{" "}
-		   {new Date().getFullYear()}
-			{"."}
-		</Typography>
-	);
-};
+import logo from "../../assets/logologin.png";
+// const Copyright = () => {
+// 	return (
+// 		<Typography variant="body2" color="textSecondary" align="center">
+// 			{"Copyleft "}
+// 			<Link color="inherit" href="https://github.com/canove">
+// 				Canove
+// 			</Link>{" "}
+// 			{new Date().getFullYear()}
+// 			{"."}
+// 		</Typography>
+// 	);
+// };
 
 const useStyles = makeStyles(theme => ({
 	paper: {
@@ -66,11 +66,11 @@ const useStyles = makeStyles(theme => ({
 
 const UserSchema = Yup.object().shape({
 	name: Yup.string()
-		.min(2, i18n.t("signup.formErrors.name.short"))
-		.max(50, i18n.t("signup.formErrors.name.long"))
-		.required(i18n.t("signup.formErrors.name.required")),
-	password: Yup.string().min(5, i18n.t("signup.formErrors.password.short")).max(50, i18n.t("signup.formErrors.password.long")),
-	email: Yup.string().email(i18n.t("signup.formErrors.email.invalid")).required(i18n.t("signup.formErrors.email.required")),
+		.min(2, "Too Short!")
+		.max(50, "Too Long!")
+		.required("Required"),
+	password: Yup.string().min(5, "Too Short!").max(50, "Too Long!"),
+	email: Yup.string().email("Invalid email").required("Required"),
 });
 
 const SignUp = () => {
@@ -83,7 +83,7 @@ const SignUp = () => {
 		companyId = params.companyId
 	}
 
-	const initialState = { name: "", email: "", phone: "", password: "", planId: "", };
+	const initialState = { name: "", email: "", password: "", planId: "", };
 
 	const [user] = useState(initialState);
 	const dueDate = moment().add(3, "day").format();
@@ -119,11 +119,11 @@ const SignUp = () => {
 			<CssBaseline />
 			<div className={classes.paper}>
 				<div>
-					<center><img style={{ margin: "0 auto", width: "70%" }} src={logo} alt="Whats" /></center>
+					<img style={{ margin: "0 auto", height: "80px", width: "100%" }} src={logo} alt="Whats" />
 				</div>
-				{/*<Typography component="h1" variant="h5">
+				<Typography component="h1" variant="h5">
 					{i18n.t("signup.title")}
-				</Typography>*/}
+				</Typography>
 				{/* <form className={classes.form} noValidate onSubmit={handleSignUp}> */}
 				<Formik
 					initialValues={user}
@@ -149,7 +149,7 @@ const SignUp = () => {
 										variant="outlined"
 										fullWidth
 										id="name"
-										label={i18n.t("signup.form.name")}
+										label="Nome da Empresa"
 									/>
 								</Grid>
 
@@ -167,31 +167,6 @@ const SignUp = () => {
 										required
 									/>
 								</Grid>
-								
-							<Grid item xs={12}>
-								<Field
-									as={InputMask}
-									mask="(99) 99999-9999"
-									variant="outlined"
-									fullWidth
-									id="phone"
-									name="phone"
-									error={touched.phone && Boolean(errors.phone)}
-									helperText={touched.phone && errors.phone}
-									autoComplete="phone"
-									required
-								>
-									{({ field }) => (
-										<TextField
-											{...field}
-											variant="outlined"
-											fullWidth
-											label={i18n.t("signup.form.phone")}
-											inputProps={{ maxLength: 11 }} // Definindo o limite de caracteres
-										/>
-									)}
-								</Field>
-							</Grid>
 								<Grid item xs={12}>
 									<Field
 										as={TextField}
@@ -214,13 +189,13 @@ const SignUp = () => {
 										variant="outlined"
 										fullWidth
 										id="plan-selection"
-										label={i18n.t("signup.form.plan")}
+										label="Plano"
 										name="planId"
 										required
 									>
 										{plans.map((plan, key) => (
 											<MenuItem key={key} value={plan.id}>
-												{plan.name} - {i18n.t("signup.plan.attendant")}: {plan.users} - {i18n.t("signup.plan.whatsapp")}: {plan.connections} - {i18n.t("signup.plan.queues")}: {plan.queues} - R$ {plan.value}
+												{plan.name} - Atendentes: {plan.users} - WhatsApp: {plan.connections} - Filas: {plan.queues} - R$ {plan.value}
 											</MenuItem>
 										))}
 									</Field>

@@ -1,7 +1,6 @@
 import { getIO } from "../../libs/socket";
 import Message from "../../models/Message";
 import Ticket from "../../models/Ticket";
-import Whatsapp from "../../models/Whatsapp";
 
 interface MessageData {
   id: string;
@@ -14,6 +13,7 @@ interface MessageData {
   mediaUrl?: string;
   ack?: number;
   queueId?: number;
+  channel?: string;
 }
 interface Request {
   messageData: MessageData;
@@ -32,15 +32,7 @@ const CreateMessageService = async ({
       {
         model: Ticket,
         as: "ticket",
-        include: [
-          "contact",
-          "queue",
-          {
-            model: Whatsapp,
-            as: "whatsapp",
-            attributes: ["name"]
-          }
-        ]
+        include: ["contact", "queue"]
       },
       {
         model: Message,
@@ -60,10 +52,8 @@ const CreateMessageService = async ({
 
   const io = getIO();
   io.to(message.ticketId.toString())
-    .to(`company-${companyId}-${message.ticket.status}`)
-    .to(`company-${companyId}-notification`)
-    .to(`queue-${message.ticket.queueId}-${message.ticket.status}`)
-    .to(`queue-${message.ticket.queueId}-notification`)
+    .to(message.ticket.status)
+    .to("notification")
     .emit(`company-${companyId}-appMessage`, {
       action: "create",
       message,

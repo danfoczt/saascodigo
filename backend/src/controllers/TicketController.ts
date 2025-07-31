@@ -8,7 +8,6 @@ import ListTicketsService from "../services/TicketServices/ListTicketsService";
 import ShowTicketUUIDService from "../services/TicketServices/ShowTicketFromUUIDService";
 import ShowTicketService from "../services/TicketServices/ShowTicketService";
 import UpdateTicketService from "../services/TicketServices/UpdateTicketService";
-import ListTicketsServiceKanban from "../services/TicketServices/ListTicketsServiceKanban";
 
 type IndexQuery = {
   searchParam: string;
@@ -28,10 +27,7 @@ interface TicketData {
   status: string;
   queueId: number;
   userId: number;
-  whatsappId: string;
-  useIntegration: boolean;
-  promptId: number;
-  integrationId: number;
+  justClose: boolean;
 }
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
@@ -79,15 +75,14 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
     userId,
     queueIds,
     withUnreadMessages,
-    companyId,
-
-
+    companyId
   });
+
   return res.status(200).json({ tickets, count, hasMore });
 };
 
 export const store = async (req: Request, res: Response): Promise<Response> => {
-  const { contactId, status, userId, queueId, whatsappId }: TicketData = req.body;
+  const { contactId, status, userId, queueId }: TicketData = req.body;
   const { companyId } = req.user;
 
   const ticket = await CreateTicketService({
@@ -95,8 +90,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     status,
     userId,
     companyId,
-    queueId,
-    whatsappId
+    queueId
   });
 
   const io = getIO();
@@ -104,60 +98,8 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     action: "update",
     ticket
   });
+
   return res.status(200).json(ticket);
-};
-
-export const kanban = async (req: Request, res: Response): Promise<Response> => {
-  const {
-    pageNumber,
-    status,
-    date,
-    updatedAt,
-    searchParam,
-    showAll,
-    queueIds: queueIdsStringified,
-    tags: tagIdsStringified,
-    users: userIdsStringified,
-    withUnreadMessages
-  } = req.query as IndexQuery;
-
-
-  const userId = req.user.id;
-  const { companyId } = req.user;
-
-  let queueIds: number[] = [];
-  let tagsIds: number[] = [];
-  let usersIds: number[] = [];
-
-  if (queueIdsStringified) {
-    queueIds = JSON.parse(queueIdsStringified);
-  }
-
-  if (tagIdsStringified) {
-    tagsIds = JSON.parse(tagIdsStringified);
-  }
-
-  if (userIdsStringified) {
-    usersIds = JSON.parse(userIdsStringified);
-  }
-
-  const { tickets, count, hasMore } = await ListTicketsServiceKanban({
-    searchParam,
-    tags: tagsIds,
-    users: usersIds,
-    pageNumber,
-    status,
-    date,
-    updatedAt,
-    showAll,
-    userId,
-    queueIds,
-    withUnreadMessages,
-    companyId
-
-  });
-
-  return res.status(200).json({ tickets, count, hasMore });
 };
 
 export const show = async (req: Request, res: Response): Promise<Response> => {
@@ -165,6 +107,7 @@ export const show = async (req: Request, res: Response): Promise<Response> => {
   const { companyId } = req.user;
 
   const contact = await ShowTicketService(ticketId, companyId);
+
   return res.status(200).json(contact);
 };
 
@@ -185,15 +128,13 @@ export const update = async (
 ): Promise<Response> => {
   const { ticketId } = req.params;
   const ticketData: TicketData = req.body;
-  const { companyId, id} = req.user;
+  const { companyId } = req.user;
 
   const { ticket } = await UpdateTicketService({
     ticketData,
     ticketId,
-    companyId,
-    actionUserId: id
+    companyId
   });
-
 
   return res.status(200).json(ticket);
 };
@@ -210,11 +151,9 @@ export const remove = async (
   const ticket = await DeleteTicketService(ticketId);
 
   const io = getIO();
-  io.to(ticketId)
-    .to(`company-${companyId}-${ticket.status}`)
-    .to(`company-${companyId}-notification`)
-    .to(`queue-${ticket.queueId}-${ticket.status}`)
-    .to(`queue-${ticket.queueId}-notification`)
+  io.to(ticket.status)
+    .to(ticketId)
+    .to("notification")
     .emit(`company-${companyId}-ticket`, {
       action: "delete",
       ticketId: +ticketId

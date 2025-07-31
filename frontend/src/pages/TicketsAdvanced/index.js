@@ -11,7 +11,7 @@ import ChatIcon from '@material-ui/icons/Chat';
 import TicketsManagerTabs from "../../components/TicketsManagerTabs/";
 import Ticket from "../../components/Ticket/";
 import TicketAdvancedLayout from "../../components/TicketAdvancedLayout";
-import logo from "../../assets/logo.png"; //PLW DESIGN LOGO//
+
 import { TicketsContext } from "../../context/Tickets/TicketsContext";
 
 import { i18n } from "../../translate/i18n";
@@ -28,7 +28,7 @@ const useStyles = makeStyles(theme => ({
         alignItems: "center",
         justifyContent: "center",
         height: "100%",
-		backgroundColor: theme.palette.boxticket, //DARK MODE PLW DESIGN//
+		backgroundColor: "#eee"
     },
     placeholderItem: {
     }
@@ -40,18 +40,18 @@ const TicketAdvanced = (props) => {
 	const [option, setOption] = useState(0);
     const { currentTicket, setCurrentTicket } = useContext(TicketsContext)
 
-    useEffect(() => {
-        if(currentTicket.id !== null) {
-            setCurrentTicket({ id: currentTicket.id, code: '#open' })
-        }
-        if (!ticketId) {
-            setOption(1)
-        }
-        return () => {
-            setCurrentTicket({ id: null, code: null })
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [])
+    // useEffect(() => {
+    //     if(currentTicket.id !== null) {
+    //         setCurrentTicket({ id: currentTicket.id, code: '#open' })
+    //     }
+    //     if (!ticketId) {
+    //         setOption(1)
+    //     }
+    //     return () => {
+    //         setCurrentTicket({ id: null, code: null })
+    //     }
+    //     // eslint-disable-next-line react-hooks/exhaustive-deps
+    // }, [])
 
     useEffect(() => {
         if (currentTicket.id !== null) {
@@ -61,15 +61,9 @@ const TicketAdvanced = (props) => {
 
 	const renderPlaceholder = () => {
 		return <Box className={classes.placeholderContainer}>
-             {/*<div className={classes.placeholderItem}>{i18n.t("chat.noTicketMessage")}</div>*/}
-			//PLW DESIGN LOGO//
-			<div>
-			<center><img style={{ margin: "0 auto", width: "70%" }} src={logo} alt="logologin" /></center>
-			</div>
-			//PLW DESIGN LOGO//
-			<br />
+            <div className={classes.placeholderItem}>{i18n.t("chat.noTicketMessage")}</div><br />
             <Button onClick={() => setOption(1)} variant="contained" color="primary">
-                {i18n.t("ticketAdvanced.selectTicket")}
+                Selecionar Ticket
             </Button>
         </Box>
 	}
@@ -96,8 +90,8 @@ const TicketAdvanced = (props) => {
                     showLabels
                     className={classes.root}
                 >
-                    <BottomNavigationAction label={i18n.t("ticketAdvanced.ticketNav")} icon={<ChatIcon />} />
-                    <BottomNavigationAction label={i18n.t("ticketAdvanced.attendanceNav")} icon={<QuestionAnswerIcon />} />
+                    <BottomNavigationAction label="Ticket" icon={<ChatIcon />} />
+                    <BottomNavigationAction label="Atendimentos" icon={<QuestionAnswerIcon />} />
                 </BottomNavigation>
             </Box>
             <Box className={classes.content}>

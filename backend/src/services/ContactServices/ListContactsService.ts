@@ -33,7 +33,7 @@ const ListContactsService = async ({
       [Op.eq]: companyId
     }
   };
-  const limit = 30;
+  const limit = 20;
   const offset = limit * (+pageNumber - 1);
 
   const { count, rows: contacts } = await Contact.findAndCountAll({
