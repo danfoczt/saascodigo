@@ -32,6 +32,11 @@ import ChatUser from "../models/ChatUser";
 import ChatMessage from "../models/ChatMessage";
 import Invoices from "../models/Invoices";
 import Subscriptions from "../models/Subscriptions";
+import BaileysChats from "../models/BaileysChats";
+import Files from "../models/Files";
+import FilesOptions from "../models/FilesOptions";
+import Prompt from "../models/Prompt";
+import QueueIntegrations from "../models/QueueIntegrations";
 
 // eslint-disable-next-line
 const dbConfig = require("../config/database");
@@ -72,7 +77,12 @@ const models = [
   ChatUser,
   ChatMessage,
   Invoices,
-  Subscriptions
+  Subscriptions,
+  BaileysChats,
+  Files,
+  FilesOptions,
+  Prompt,
+  QueueIntegrations,
 ];
 
 sequelize.addModels(models);

@@ -1,4 +1,5 @@
-import { proto, WASocket } from "@whiskeysockets/baileys";
+import { proto } from "@whiskeysockets/baileys";
+import WALegacySocket from "@whiskeysockets/baileys"
 import Ticket from "../models/Ticket";
 import GetTicketWbot from "./GetTicketWbot";
 import AppError from "../errors/AppError";
@@ -16,14 +17,13 @@ export const GetWbotMessage = async (
   const fetchWbotMessagesGradually = async (): Promise<
     proto.WebMessageInfo | Message | null | undefined
   > => {
-    const msgFound = await GetMessageService({
-      id: messageId
-    });
+      const msgFound = await GetMessageService({
+        id: messageId
+      });
 
-    return msgFound;
+      return msgFound;
 
 
-    return null;
   };
 
   try {
@@ -35,7 +35,6 @@ export const GetWbotMessage = async (
 
     return msgFound;
   } catch (err) {
-    console.log(err);
     throw new AppError("ERR_FETCH_WAPP_MSG");
   }
 };

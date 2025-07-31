@@ -1,6 +1,6 @@
 import React, { useState, useContext, useEffect } from "react";
 import clsx from "clsx";
-
+import moment from "moment";
 import {
   makeStyles,
   Drawer,
@@ -19,21 +19,32 @@ import {
 import MenuIcon from "@material-ui/icons/Menu";
 import ChevronLeftIcon from "@material-ui/icons/ChevronLeft";
 import AccountCircle from "@material-ui/icons/AccountCircle";
+import CachedIcon from "@material-ui/icons/Cached";
 
 import MainListItems from "./MainListItems";
 import NotificationsPopOver from "../components/NotificationsPopOver";
+import NotificationsVolume from "../components/NotificationsVolume";
 import UserModal from "../components/UserModal";
 import { AuthContext } from "../context/Auth/AuthContext";
 import BackdropLoading from "../components/BackdropLoading";
+import DarkMode from "../components/DarkMode";
 import { i18n } from "../translate/i18n";
 import toastError from "../errors/toastError";
 import AnnouncementsPopover from "../components/AnnouncementsPopover";
 
 import logo from "../assets/logo.png";
-import { socketConnection } from "../services/socket";
+import { SocketContext } from "../context/Socket/SocketContext";
 import ChatPopover from "../pages/Chat/ChatPopover";
 
-const drawerWidth = 300;
+import { useDate } from "../hooks/useDate";
+
+import ColorModeContext from "../layout/themeContext";
+import Brightness4Icon from '@material-ui/icons/Brightness4';
+import Brightness7Icon from '@material-ui/icons/Brightness7';
+import LanguageControl from "../components/LanguageControl";
+import { LanguageOutlined } from "@material-ui/icons";
+
+const drawerWidth = 240;
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -42,10 +53,24 @@ const useStyles = makeStyles((theme) => ({
     [theme.breakpoints.down("sm")]: {
       height: "calc(100vh - 56px)",
     },
+    backgroundColor: theme.palette.fancyBackground,
+    '& .MuiButton-outlinedPrimary': {
+      color: theme.mode === 'light' ? '#FFF' : '#FFF',
+	  //backgroundColor: theme.mode === 'light' ? '#682ee2' : '#682ee2',
+	backgroundColor: theme.mode === 'light' ? theme.palette.primary.main : '#1c1c1c',
+      //border: theme.mode === 'light' ? '1px solid rgba(0 124 102)' : '1px solid rgba(255, 255, 255, 0.5)',
+    },
+    '& .MuiTab-textColorPrimary.Mui-selected': {
+      color: theme.mode === 'light' ? 'Primary' : '#FFF',
+    }
   },
-
+  avatar: {
+    width: "100%",
+  },
   toolbar: {
     paddingRight: 24, // keep right padding when drawer closed
+    color: theme.palette.dark.main,
+    background: theme.palette.barraSuperior,
   },
   toolbarIcon: {
     display: "flex",
@@ -53,6 +78,9 @@ const useStyles = makeStyles((theme) => ({
     justifyContent: "space-between",
     padding: "0 8px",
     minHeight: "48px",
+    [theme.breakpoints.down("sm")]: {
+      height: "48px"
+    }
   },
   appBar: {
     zIndex: theme.zIndex.drawer + 1,
@@ -68,6 +96,9 @@ const useStyles = makeStyles((theme) => ({
       easing: theme.transitions.easing.sharp,
       duration: theme.transitions.duration.enteringScreen,
     }),
+    [theme.breakpoints.down("sm")]: {
+      display: "none"
+    }
   },
   menuButton: {
     marginRight: 36,
@@ -78,6 +109,7 @@ const useStyles = makeStyles((theme) => ({
   title: {
     flexGrow: 1,
     fontSize: 14,
+    color: "white",
   },
   drawerPaper: {
     position: "relative",
@@ -87,6 +119,10 @@ const useStyles = makeStyles((theme) => ({
       easing: theme.transitions.easing.sharp,
       duration: theme.transitions.duration.enteringScreen,
     }),
+    [theme.breakpoints.down("sm")]: {
+      width: "100%"
+    },
+    ...theme.scrollbarStylesSoft
   },
   drawerPaperClose: {
     overflowX: "hidden",
@@ -98,6 +134,9 @@ const useStyles = makeStyles((theme) => ({
     [theme.breakpoints.up("sm")]: {
       width: theme.spacing(9),
     },
+    [theme.breakpoints.down("sm")]: {
+      width: "100%"
+    }
   },
   appBarSpacer: {
     minHeight: "48px",
@@ -105,7 +144,7 @@ const useStyles = makeStyles((theme) => ({
   content: {
     flex: 1,
     overflow: "auto",
-    ...theme.scrollbarStyles,
+
   },
   container: {
     paddingTop: theme.spacing(4),
@@ -115,7 +154,7 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.spacing(2),
     display: "flex",
     overflow: "auto",
-    flexDirection: "column",
+    flexDirection: "column"
   },
   containerWithScroll: {
     flex: 1,
@@ -123,9 +162,23 @@ const useStyles = makeStyles((theme) => ({
     overflowY: "scroll",
     ...theme.scrollbarStyles,
   },
+  NotificationsPopOver: {
+    // color: theme.barraSuperior.secondary.main,
+  },
+  logo: {
+    width: "80%",
+    height: "auto",
+    maxWidth: 180,
+    [theme.breakpoints.down("sm")]: {
+      width: "auto",
+      height: "80%",
+      maxWidth: 180,
+    },
+    logo: theme.logo
+  },
 }));
 
-const LoggedInLayout = ({ children }) => {
+const LoggedInLayout = ({ children, themeToggle }) => {
   const classes = useStyles();
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
@@ -133,13 +186,73 @@ const LoggedInLayout = ({ children }) => {
   const { handleLogout, loading } = useContext(AuthContext);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerVariant, setDrawerVariant] = useState("permanent");
+  // const [dueDate, setDueDate] = useState("");
   const { user } = useContext(AuthContext);
 
   const theme = useTheme();
+  const { colorMode } = useContext(ColorModeContext);
   const greaterThenSm = useMediaQuery(theme.breakpoints.up("sm"));
 
+  const [volume, setVolume] = useState(localStorage.getItem("volume") || 1);
+
+  const { dateToClient } = useDate();
+
+  // Languages
+  const [anchorElLanguage, setAnchorElLanguage] = useState(null);
+  const [menuLanguageOpen, setMenuLanguageOpen] = useState(false);
+
+
+  //################### CODIGOS DE TESTE #########################################
+  // useEffect(() => {
+  //   navigator.getBattery().then((battery) => {
+  //     console.log(`Battery Charging: ${battery.charging}`);
+  //     console.log(`Battery Level: ${battery.level * 100}%`);
+  //     console.log(`Charging Time: ${battery.chargingTime}`);
+  //     console.log(`Discharging Time: ${battery.dischargingTime}`);
+  //   })
+  // }, []);
+
+  // useEffect(() => {
+  //   const geoLocation = navigator.geolocation
+
+  //   geoLocation.getCurrentPosition((position) => {
+  //     let lat = position.coords.latitude;
+  //     let long = position.coords.longitude;
+
+  //     console.log('latitude: ', lat)
+  //     console.log('longitude: ', long)
+  //   })
+  // }, []);
+
+  // useEffect(() => {
+  //   const nucleos = window.navigator.hardwareConcurrency;
+
+  //   console.log('Nucleos: ', nucleos)
+  // }, []);
+
+  // useEffect(() => {
+  //   console.log('userAgent', navigator.userAgent)
+  //   if (
+  //     navigator.userAgent.match(/Android/i)
+  //     || navigator.userAgent.match(/webOS/i)
+  //     || navigator.userAgent.match(/iPhone/i)
+  //     || navigator.userAgent.match(/iPad/i)
+  //     || navigator.userAgent.match(/iPod/i)
+  //     || navigator.userAgent.match(/BlackBerry/i)
+  //     || navigator.userAgent.match(/Windows Phone/i)
+  //   ) {
+  //     console.log('é mobile ', true) //celular
+  //   }
+  //   else {
+  //     console.log('não é mobile: ', false) //nao é celular
+  //   }
+  // }, []);
+  //##############################################################################
+
+  const socketManager = useContext(SocketContext);
+
   useEffect(() => {
-    if (document.body.offsetWidth > 600) {
+    if (document.body.offsetWidth > 1200) {
       setDrawerOpen(true);
     }
   }, []);
@@ -156,7 +269,7 @@ const LoggedInLayout = ({ children }) => {
     const companyId = localStorage.getItem("companyId");
     const userId = localStorage.getItem("userId");
 
-    const socket = socketConnection({ companyId });
+    const socket = socketManager.getSocket(companyId);
 
     socket.on(`company-${companyId}-auth`, (data) => {
       if (data.user.id === +userId) {
@@ -177,18 +290,27 @@ const LoggedInLayout = ({ children }) => {
       socket.disconnect();
       clearInterval(interval);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [socketManager]);
 
   const handleMenu = (event) => {
     setAnchorEl(event.currentTarget);
     setMenuOpen(true);
   };
 
+  const handlemenuLanguage = ( event ) => {
+    setAnchorElLanguage(event.currentTarget);
+    setMenuLanguageOpen( true );
+  }
+
   const handleCloseMenu = () => {
     setAnchorEl(null);
     setMenuOpen(false);
   };
+
+  const handleCloseMenuLanguage = (  ) => {
+    setAnchorElLanguage(null);
+    setMenuLanguageOpen(false);
+  }
 
   const handleOpenUserModal = () => {
     setUserModalOpen(true);
@@ -205,6 +327,21 @@ const LoggedInLayout = ({ children }) => {
       setDrawerOpen(false);
     }
   };
+
+  const handleRefreshPage = () => {
+    window.location.reload(false);
+  }
+
+  const handleMenuItemClick = () => {
+    const { innerWidth: width } = window;
+    if (width <= 600) {
+      setDrawerOpen(false);
+    }
+  };
+
+  const toggleColorMode = () => {
+    colorMode.toggleColorMode();
+  }
 
   if (loading) {
     return <BackdropLoading />;
@@ -224,14 +361,14 @@ const LoggedInLayout = ({ children }) => {
         open={drawerOpen}
       >
         <div className={classes.toolbarIcon}>
-          <img src={logo} style={{ margin: "0 auto", height: '100%', width: '100%',alignSelf: 'center' }} alt="logo" />
+          <img src={logo} className={classes.logo} alt="logo" />
           <IconButton onClick={() => setDrawerOpen(!drawerOpen)}>
             <ChevronLeftIcon />
           </IconButton>
         </div>
         <Divider />
         <List className={classes.containerWithScroll}>
-          <MainListItems drawerClose={drawerClose} />
+          <MainListItems drawerClose={drawerClose} collapsed={!drawerOpen} />
         </List>
         <Divider />
       </Drawer>
@@ -258,22 +395,76 @@ const LoggedInLayout = ({ children }) => {
           >
             <MenuIcon />
           </IconButton>
+
           <Typography
-            component="h1"
+            component="h2"
             variant="h6"
             color="inherit"
             noWrap
             className={classes.title}
           >
-            {greaterThenSm ? (
+            {/* {greaterThenSm && user?.profile === "admin" && getDateAndDifDays(user?.company?.dueDate).difData < 7 ? ( */}
+            {greaterThenSm && user?.profile === "admin" && user?.company?.dueDate ? (
               <>
-                Olá <b>{user.name}</b>, Seja bem-vindo.
+                {i18n.t("mainDrawer.appBar.greeting.hello")} <b>{user.name}</b>, {i18n.t("mainDrawer.appBar.greeting.welcome")} <b>{user?.company?.name}</b>! ({i18n.t("mainDrawer.appBar.greeting.active")} {dateToClient(user?.company?.dueDate)})
               </>
             ) : (
-              user.name
+              <>
+                {i18n.t("mainDrawer.appBar.greeting.hello")} <b>{user.name}</b>, {i18n.t("mainDrawer.appBar.greeting.welcome")} <b>{user?.company?.name}</b>!
+              </>
             )}
           </Typography>
-          {user.id && <NotificationsPopOver />}
+          
+          <div>
+            <IconButton edge="start">
+              <LanguageOutlined
+                aria-label="account of current user"
+                aria-controls="menu-appbar"
+                aria-haspopup="true"
+                onClick={handlemenuLanguage}
+                variant="contained"
+                style={{ color: "white",marginRight:10 }}
+              />
+            </IconButton>
+            <Menu
+              id="menu-appbar-language"
+              anchorEl={anchorElLanguage}
+              getContentAnchorEl={null}
+              anchorOrigin={{
+                vertical: "bottom",
+                horizontal: "right",
+              }}
+              transformOrigin={{
+                vertical: "top",
+                horizontal: "right",
+              }}
+              open={menuLanguageOpen}
+              onClose={handleCloseMenuLanguage}
+            >
+              <MenuItem>
+                <LanguageControl />
+              </MenuItem>
+            </Menu>
+          </div>          
+
+          <IconButton edge="start" onClick={toggleColorMode}>
+            {theme.mode === 'dark' ? <Brightness7Icon style={{ color: "white" }} /> : <Brightness4Icon style={{ color: "white" }} />}
+          </IconButton>
+
+          <NotificationsVolume
+            setVolume={setVolume}
+            volume={volume}
+          />
+
+          <IconButton
+            onClick={handleRefreshPage}
+            aria-label={i18n.t("mainDrawer.appBar.refresh")}
+            color="inherit"
+          >
+            <CachedIcon style={{ color: "white" }} />
+          </IconButton>
+
+          {user.id && <NotificationsPopOver volume={volume} />}
 
           <AnnouncementsPopover />
 
@@ -286,7 +477,7 @@ const LoggedInLayout = ({ children }) => {
               aria-haspopup="true"
               onClick={handleMenu}
               variant="contained"
-
+              style={{ color: "white" }}
             >
               <AccountCircle />
             </IconButton>

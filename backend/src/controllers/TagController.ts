@@ -10,10 +10,12 @@ import ShowService from "../services/TagServices/ShowService";
 import DeleteService from "../services/TagServices/DeleteService";
 import SimpleListService from "../services/TagServices/SimpleListService";
 import SyncTagService from "../services/TagServices/SyncTagsService";
+import KanbanListService from "../services/TagServices/KanbanListService";
 
 type IndexQuery = {
   searchParam?: string;
   pageNumber?: string | number;
+  kanban?: number;
 };
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
@@ -30,22 +32,31 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
 };
 
 export const store = async (req: Request, res: Response): Promise<Response> => {
-  const { name, color } = req.body;
+  const { name, color, kanban } = req.body;
   const { companyId } = req.user;
 
   const tag = await CreateService({
     name,
     color,
-    companyId
+    companyId,
+    kanban
   });
 
   const io = getIO();
-  io.emit("tag", {
+  io.to(`company-${companyId}-mainchannel`).emit("tag", {
     action: "create",
     tag
   });
 
   return res.status(200).json(tag);
+};
+
+export const kanban = async (req: Request, res: Response): Promise<Response> => {
+  const { companyId } = req.user;
+
+  const tags = await KanbanListService({ companyId });
+
+  return res.json({lista:tags});
 };
 
 export const show = async (req: Request, res: Response): Promise<Response> => {
@@ -70,7 +81,7 @@ export const update = async (
   const tag = await UpdateService({ tagData, id: tagId });
 
   const io = getIO();
-  io.emit("tag", {
+  io.to(`company-${req.user.companyId}-mainchannel`).emit("tag", {
     action: "update",
     tag
   });
@@ -87,7 +98,7 @@ export const remove = async (
   await DeleteService(tagId);
 
   const io = getIO();
-  io.emit("tag", {
+  io.to(`company-${req.user.companyId}-mainchannel`).emit("tag", {
     action: "delete",
     tagId
   });

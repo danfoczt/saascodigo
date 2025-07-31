@@ -8,8 +8,14 @@ import Grid from '@material-ui/core/Grid';
 import StarIcon from '@material-ui/icons/StarBorder';
 import Typography from '@material-ui/core/Typography';
 import { makeStyles } from '@material-ui/core/styles';
+
+import IconButton from '@material-ui/core/IconButton';
+import MinimizeIcon from '@material-ui/icons/Minimize';
+import AddIcon from '@material-ui/icons/Add';
+
 import usePlans from "../../../hooks/usePlans";
 import useCompanies from "../../../hooks/useCompanies";
+import { i18n } from '../../../translate/i18n';
 
 const useStyles = makeStyles((theme) => ({
   '@global': {
@@ -66,7 +72,37 @@ export default function Pricing(props) {
     activeStep,
   } = props;
 
- 
+  const handleChangeAdd = (event, newValue) => {
+    if (newValue < 3) return
+
+    const newPrice = 11.00;
+
+    setUsersPlans(newValue);
+    setCustomValuePlans(customValuePlans + newPrice);
+  }
+
+  const handleChangeMin = (event, newValue) => {
+    if (newValue < 3) return
+
+    const newPrice = 11;
+
+    setUsersPlans(newValue);
+    setCustomValuePlans(customValuePlans - newPrice);
+  }
+
+  const handleChangeConnectionsAdd = (event, newValue) => {
+    if (newValue < 3) return
+    const newPrice = 20.00;
+    setConnectionsPlans(newValue);
+    setCustomValuePlans(customValuePlans + newPrice);
+  }
+
+  const handleChangeConnectionsMin = (event, newValue) => {
+    if (newValue < 3) return
+    const newPrice = 20;
+    setConnectionsPlans(newValue);
+    setCustomValuePlans(customValuePlans - newPrice);
+  }
 
   const { list, finder } = usePlans();
   const { find } = useCompanies();
@@ -111,14 +147,14 @@ export default function Pricing(props) {
         planId: plansCompanies.id,
         price: plansCompanies.value,
         description: [
-          `${plansCompanies.users} Usuários`,
-          `${plansCompanies.connections} Conexão`,
-          `${plansCompanies.queues} Filas`
+          `${plansCompanies.users} ${i18n.t("checkoutPage.pricing.users")}`,
+          `${plansCompanies.connections} ${i18n.t("checkoutPage.pricing.connection")}`,
+          `${plansCompanies.queues} ${i18n.t("checkoutPage.pricing.queues")}`
         ],
         users: plansCompanies.users,
         connections: plansCompanies.connections,
         queues: plansCompanies.queues,
-        buttonText: 'SELECIONAR',
+        buttonText: i18n.t("checkoutPage.pricing.SELECT"),
         buttonVariant: 'outlined',
       })
 
@@ -160,7 +196,7 @@ export default function Pricing(props) {
                     }
                   </Typography>
                   <Typography variant="h6" color="textSecondary">
-                    /mês
+                    /{i18n.t("checkoutPage.pricing.month")}
                   </Typography>
                 </div>
                 <ul>

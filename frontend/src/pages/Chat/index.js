@@ -19,12 +19,13 @@ import ChatList from "./ChatList";
 import ChatMessages from "./ChatMessages";
 import { UsersFilter } from "../../components/UsersFilter";
 import api from "../../services/api";
-import { socketConnection } from "../../services/socket";
+import { SocketContext } from "../../context/Socket/SocketContext";
 
 import { has, isObject } from "lodash";
 
 import { AuthContext } from "../../context/Auth/AuthContext";
 import withWidth, { isWidthUp } from "@material-ui/core/withWidth";
+import { i18n } from "../../translate/i18n";
 
 const useStyles = makeStyles((theme) => ({
   mainContainer: {
@@ -41,7 +42,7 @@ const useStyles = makeStyles((theme) => ({
     flex: 1,
     height: "100%",
     border: "1px solid rgba(0, 0, 0, 0.12)",
-    backgroundColor: "#eee",
+    backgroundColor: theme.palette.dark,
   },
   gridItem: {
     height: "100%",
@@ -81,6 +82,16 @@ export function ChatModal({
 
   const handleSave = async () => {
     try {
+      if (!title) {
+        alert(i18n.t("chat.toasts.fillTitle"));
+        return;
+      }
+
+      if (!users || users.length === 0) {
+        alert(i18n.t("chat.toasts.fillUser"));
+        return;
+      }
+
       if (type === "edit") {
         await api.put(`/chats/${chat.id}`, {
           users,
@@ -95,7 +106,7 @@ export function ChatModal({
       }
       handleClose();
     } catch (err) {}
-  };
+  };  
 
   return (
     <Dialog
@@ -104,13 +115,13 @@ export function ChatModal({
       aria-labelledby="alert-dialog-title"
       aria-describedby="alert-dialog-description"
     >
-      <DialogTitle id="alert-dialog-title">Conversa</DialogTitle>
+      <DialogTitle id="alert-dialog-title">{i18n.t("chat.modal.title")}</DialogTitle>
       <DialogContent>
         <Grid spacing={2} container>
           <Grid xs={12} style={{ padding: 18 }} item>
             <TextField
-              label="Título"
-              placeholder="Título"
+              label={i18n.t("chat.modal.titleField")}
+              placeholder={i18n.t("chat.modal.titleField")}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               variant="outlined"
@@ -128,10 +139,10 @@ export function ChatModal({
       </DialogContent>
       <DialogActions>
         <Button onClick={handleClose} color="primary">
-          Fechar
+          {i18n.t("chat.buttons.close")}
         </Button>
         <Button onClick={handleSave} color="primary" variant="contained">
-          Salvar
+          {i18n.t("chat.buttons.save")}
         </Button>
       </DialogActions>
     </Dialog>
@@ -156,6 +167,8 @@ function Chat(props) {
   const isMounted = useRef(true);
   const scrollToBottomRef = useRef();
   const { id } = useParams();
+
+  const socketManager = useContext(SocketContext);
 
   useEffect(() => {
     return () => {
@@ -196,7 +209,7 @@ function Chat(props) {
 
   useEffect(() => {
     const companyId = localStorage.getItem("companyId");
-    const socket = socketConnection({ companyId });
+    const socket = socketManager.getSocket(companyId);
 
     socket.on(`company-${companyId}-chat-user-${user.id}`, (data) => {
       if (data.action === "create") {
@@ -263,7 +276,7 @@ function Chat(props) {
       socket.disconnect();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentChat]);
+  }, [currentChat, socketManager]);
 
   const selectChat = (chat) => {
     try {
@@ -322,7 +335,7 @@ function Chat(props) {
     return (
       <Grid className={classes.gridContainer} container>
         <Grid className={classes.gridItem} md={3} item>
-          {user.profile === "admin" && (
+          
             <div className={classes.btnContainer}>
               <Button
                 onClick={() => {
@@ -332,10 +345,10 @@ function Chat(props) {
                 color="primary"
                 variant="contained"
               >
-                Nova
+                {i18n.t("chat.buttons.new")}
               </Button>
             </div>
-          )}
+          
           <ChatList
             chats={chats}
             pageInfo={chatsPageInfo}
@@ -376,8 +389,8 @@ function Chat(props) {
             onChange={(e, v) => setTab(v)}
             aria-label="disabled tabs example"
           >
-            <Tab label="Chats" />
-            <Tab label="Mensagens" />
+            <Tab label={i18n.t("chat.chats")} />
+            <Tab label={i18n.t("chat.messages")} />
           </Tabs>
         </Grid>
         {tab === 0 && (
@@ -388,7 +401,7 @@ function Chat(props) {
                 color="primary"
                 variant="contained"
               >
-                Novo
+                {i18n.t("chat.buttons.newChat")}
               </Button>
             </div>
             <ChatList
