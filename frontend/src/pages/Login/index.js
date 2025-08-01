@@ -1,6 +1,5 @@
 import React, { useState, useContext, useEffect } from "react";
 import { Link as RouterLink } from "react-router-dom";
-import ReCAPTCHA from "react-google-recaptcha"; // MODIFICAÇÃO 1: Importação do pacote react-google-recaptcha
 
 import Button from "@material-ui/core/Button";
 import CssBaseline from "@material-ui/core/CssBaseline";
@@ -113,30 +112,17 @@ const useStyles = makeStyles(theme => ({
     color: "#333",
     marginBottom: theme.spacing(2),
   },
-  // MODIFICAÇÃO 2: Estilo para centralizar o reCAPTCHA
-  recaptcha: {
-    marginTop: theme.spacing(2),
-    display: "flex",
-    justifyContent: "center",
-  },
 }));
 
 const Login = () => {
   const classes = useStyles();
 
   const [user, setUser] = useState({ email: "", password: "" });
-  // MODIFICAÇÃO 3: Estado para armazenar o token do reCAPTCHA
-  const [recaptchaToken, setRecaptchaToken] = useState(null);
   const { handleLogin } = useContext(AuthContext);
   const [viewregister, setviewregister] = useState("disabled");
 
   const handleChangeInput = e => {
     setUser({ ...user, [e.target.name]: e.target.value });
-  };
-
-  // MODIFICAÇÃO 4: Função para capturar o token do reCAPTCHA quando concluído
-  const handleRecaptchaChange = (token) => {
-    setRecaptchaToken(token);
   };
 
   useEffect(() => {
@@ -153,33 +139,14 @@ const Login = () => {
     }
   };
 
-  // MODIFICAÇÃO 5: Ajuste no envio do formulário para validar o reCAPTCHA
   const handlSubmit = e => {
     e.preventDefault();
-    if (!recaptchaToken) {
-      alert("Por favor, complete o reCAPTCHA antes de fazer login.");
-      return;
-    }
-    // Envia o token do reCAPTCHA junto com email e password
-    handleLogin({ ...user, recaptchaToken });
+    handleLogin(user);
   };
-
-  // MODIFICAÇÃO 6: Chave do site do reCAPTCHA (Site Key)
-  const SITE_KEY = "6LeDYTErAAAAAAhl6cg8LGm_u2h62k4I7k9HfLIB";
 
   return (
     <div className={classes.root}>
-      <div className={classes.leftSide}>
-        {/* Caso queira texto, descomente aqui */}
-        {/* <div className={classes.leftContent}>
-          <Typography variant="h4" component="h1" gutterBottom>
-            IDE+ COMERCIAL: Seu Multiatendimento
-          </Typography>
-          <Typography variant="body1">
-            Chatbots e redes sociais em um só lugar!
-          </Typography>
-        </div> */}
-      </div>
+      <div className={classes.leftSide}></div>
       <div className={classes.rightSide}>
         <Container component="main" maxWidth="xs">
           <CssBaseline />
@@ -216,13 +183,6 @@ const Login = () => {
                 autoComplete="current-password"
                 className={classes.inputField}
               />
-              {/* MODIFICAÇÃO 7: Adição do componente reCAPTCHA no formulário */}
-              <div className={classes.recaptcha}>
-                <ReCAPTCHA
-                  sitekey={SITE_KEY}
-                  onChange={handleRecaptchaChange}
-                />
-              </div>
               <Grid container justify="flex-end">
                 <Grid item xs={6} style={{ textAlign: "right" }}>
                   <Link component={RouterLink} to="/forgetpsw" variant="body2" className={classes.link}>
