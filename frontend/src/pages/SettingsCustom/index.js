@@ -11,6 +11,8 @@ import CompaniesManager from "../../components/CompaniesManager";
 import PlansManager from "../../components/PlansManager";
 import HelpsManager from "../../components/HelpsManager";
 import Options from "../../components/Settings/Options";
+import Uploader from "../../components/Settings/Uploader";
+import NewCompaniesManager from "../../pages/Companies";
 
 import { i18n } from "../../translate/i18n.js";
 import { toast } from "react-toastify";
@@ -138,7 +140,7 @@ const SettingsCustom = () => {
     try {
       setSchedules(data);
       await updateSchedules({ id: company.id, schedules: data });
-      toast.success(i18n.t("settings.schedulesUpdated"));
+      toast.success("Horários atualizados com sucesso.");
     } catch (e) {
       toast.error(e);
     }
@@ -164,11 +166,13 @@ const SettingsCustom = () => {
           onChange={handleTabChange}
           className={classes.tab}
         >
-          <Tab label={i18n.t("settings.tabs.options")} value={"options"} />
-          {schedulesEnabled && <Tab label={i18n.t("settings.tabs.schedules")} value={"schedules"} />}
-          {isSuper() ? <Tab label={i18n.t("settings.tabs.companies")} value={"companies"} /> : null}
-          {isSuper() ? <Tab label={i18n.t("settings.tabs.plans")} value={"plans"} /> : null}
-          {isSuper() ? <Tab label={i18n.t("settings.tabs.helps")} value={"helps"} /> : null}
+          <Tab label="Opções" value={"options"} />
+          {schedulesEnabled && <Tab label="Horários" value={"schedules"} />}
+		  {isSuper() ? <Tab label="Logo" value={"uploader"} /> : null}
+          {isSuper() ? <Tab label="Empresas" value={"companies"} /> : null}
+		  {isSuper() ? <Tab label="Cadastrar Empresa" value={"newcompanie"} /> : null}
+          {isSuper() ? <Tab label="Planos" value={"plans"} /> : null}
+          {isSuper() ? <Tab label="Ajuda" value={"helps"} /> : null}
         </Tabs>
         <Paper className={classes.paper} elevation={0}>
           <TabPanel
@@ -200,6 +204,18 @@ const SettingsCustom = () => {
               <TabPanel
                 className={classes.container}
                 value={tab}
+                name={"newcompanie"}
+              >
+                <NewCompaniesManager />
+              </TabPanel>
+            )}
+          />
+          <OnlyForSuperUser
+            user={currentUser}
+            yes={() => (
+              <TabPanel
+                className={classes.container}
+                value={tab}
                 name={"plans"}
               >
                 <PlansManager />
@@ -215,6 +231,18 @@ const SettingsCustom = () => {
                 name={"helps"}
               >
                 <HelpsManager />
+              </TabPanel>
+            )}
+          />
+		 <OnlyForSuperUser
+            user={currentUser}
+            yes={() => (
+              <TabPanel
+                className={classes.container}
+                value={tab}
+                name={"uploader"}
+              >
+                <Uploader />
               </TabPanel>
             )}
           />

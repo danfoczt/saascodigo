@@ -18,7 +18,6 @@ import { isNil } from "lodash";
 import Whatsapp from "../../models/Whatsapp";
 import { Op } from "sequelize";
 import AppError from "../../errors/AppError";
-import Company from "../../models/Company";
 
 interface TicketData {
   status?: string;
@@ -30,13 +29,13 @@ interface TicketData {
   useIntegration?: boolean;
   integrationId?: number | null;
   promptId?: number | null;
+  lastMessage?: string;
 }
 
 interface Request {
   ticketData: TicketData;
   ticketId: string | number;
   companyId: number;
-  actionUserId?: string | null;
 }
 
 interface Response {
@@ -48,18 +47,19 @@ interface Response {
 const UpdateTicketService = async ({
   ticketData,
   ticketId,
-  companyId,
-  actionUserId = null
+  companyId
 }: Request): Promise<Response> => {
 
   try {
     const { status } = ticketData;
-    let { queueId, userId, whatsappId } = ticketData;
+    let { queueId, userId, whatsappId, lastMessage = null } = ticketData;
     let chatbot: boolean | null = ticketData.chatbot || false;
     let queueOptionId: number | null = ticketData.queueOptionId || null;
     let promptId: number | null = ticketData.promptId || null;
     let useIntegration: boolean | null = ticketData.useIntegration || false;
     let integrationId: number | null = ticketData.integrationId || null;
+
+    console.log("ticketData", ticketData);
 
     const io = getIO();
 
@@ -70,6 +70,8 @@ const UpdateTicketService = async ({
         key
       }
     });
+
+
 
     const ticket = await ShowTicketService(ticketId, companyId);
     const ticketTraking = await FindOrCreateATicketTrakingService({
@@ -128,8 +130,7 @@ const UpdateTicketService = async ({
           await SendWhatsAppMessage({ body: bodyRatingMessage, ticket });
 
           await ticketTraking.update({
-            ratingAt: moment().toDate(),
-            userId: actionUserId
+            ratingAt: moment().toDate()
           });
 
           io.to(`company-${ticket.companyId}-open`)
@@ -176,20 +177,14 @@ const UpdateTicketService = async ({
       // Mensagem de transferencia da FILA
       if (oldQueueId !== queueId && oldUserId === userId && !isNil(oldQueueId) && !isNil(queueId)) {
 
-        const {language} = await Company.findByPk(companyId);
         const queue = await Queue.findByPk(queueId);
         const wbot = await GetTicketWbot(ticket);
-
-        const translatedMessage = {
-          'pt': "*Mensagem automática*:\nVocê foi transferido para o departamento *" + queue?.name + "*\naguarde, já vamos te atender!",
-          'en': "*Automatic message*:\nYou have been transferred to the *" + queue?.name + "* department\nplease wait, we'll assist you soon!",
-          'es': "*Mensaje automático*:\nHas sido transferido al departamento *" + queue?.name + "*\npor favor espera, ¡te atenderemos pronto!"
-        }
+        const msgtxt = "*Mensagem automática*:\nVocê foi transferido para o departamento *" + queue?.name + "*\naguarde, já vamos te atender!";
 
         const queueChangedMessage = await wbot.sendMessage(
           `${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`,
           {
-            text: translatedMessage[language]
+            text: msgtxt
           }
         );
         await verifyMessage(queueChangedMessage, ticket, ticket.contact);
@@ -197,21 +192,14 @@ const UpdateTicketService = async ({
       else
         // Mensagem de transferencia do ATENDENTE
         if (oldUserId !== userId && oldQueueId === queueId && !isNil(oldUserId) && !isNil(userId)) {
-
-          const {language} = await Company.findByPk(companyId);
           const wbot = await GetTicketWbot(ticket);
           const nome = await ShowUserService(ticketData.userId);
-
-          const translatedMessage = {
-              'pt': "*Mensagem automática*:\nFoi transferido para o atendente *" + nome.name + "*\naguarde, já vamos te atender!",
-              'en': "*Automatic message*:\nYou have been transferred to agent *" + nome.name + "*\nplease wait, we'll assist you soon!",
-              'es': "*Mensaje automático*:\nHas sido transferido al agente *" + nome.name + "*\npor favor espera, ¡te atenderemos pronto!"
-          }
+          const msgtxt = "*Mensagem automática*:\nFoi transferido para o atendente *" + nome.name + "*\naguarde, já vamos te atender!";
 
           const queueChangedMessage = await wbot.sendMessage(
             `${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`,
             {
-              text: translatedMessage[language]
+              text: msgtxt
             }
           );
           await verifyMessage(queueChangedMessage, ticket, ticket.contact);
@@ -219,46 +207,33 @@ const UpdateTicketService = async ({
         else
           // Mensagem de transferencia do ATENDENTE e da FILA
           if (oldUserId !== userId && !isNil(oldUserId) && !isNil(userId) && oldQueueId !== queueId && !isNil(oldQueueId) && !isNil(queueId)) {
-
-            const {language} = await Company.findByPk(companyId);
             const wbot = await GetTicketWbot(ticket);
             const queue = await Queue.findByPk(queueId);
             const nome = await ShowUserService(ticketData.userId);
-
-            const translatedMessage = {
-              'pt': "*Mensagem automática*:\nVocê foi transferido para o departamento *" + queue?.name + "* e contará com a presença de *" + nome.name + "*\naguarde, já vamos te atender!",
-              'en': "*Automatic message*:\nYou have been transferred to the *" + queue?.name + "* department and will be assisted by *" + nome.name + "*\nplease wait, we'll assist you soon!",
-              'es': "*Mensaje automático*:\nHas sido transferido al departamento *" + queue?.name + "* y serás atendido por *" + nome.name + "*\npor favor espera, ¡te atenderemos pronto!"
-            }
+            const msgtxt = "*Mensagem automática*:\nVocê foi transferido para o departamento *" + queue?.name + "* e contará com a presença de *" + nome.name + "*\naguarde, já vamos te atender!";
 
             const queueChangedMessage = await wbot.sendMessage(
               `${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`,
               {
-                text: translatedMessage[language]
+                text: msgtxt
               }
             );
             await verifyMessage(queueChangedMessage, ticket, ticket.contact);
           } else
             if (oldUserId !== undefined && isNil(userId) && oldQueueId !== queueId && !isNil(queueId)) {
 
-              const {language} = await Company.findByPk(companyId);
               const queue = await Queue.findByPk(queueId);
               const wbot = await GetTicketWbot(ticket);
-
-              const translatedMessage = {
-                'pt': "*Mensagem automática*:\nVocê foi transferido para o departamento *" + queue?.name + "*\naguarde, já vamos te atender!",
-                'en': "*Automatic message*:\nYou have been transferred to the *" + queue?.name + "* department\nplease wait, we'll assist you soon!",
-                'es': "*Mensaje automático*:\nHas sido transferido al departamento *" + queue?.name + "*\npor favor espera, ¡te atenderemos pronto!"
-              }
+              const msgtxt = "*Mensagem automática*:\nVocê foi transferido para o departamento *" + queue?.name + "*\naguarde, já vamos te atender!";
 
               const queueChangedMessage = await wbot.sendMessage(
                 `${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`,
                 {
-                  text: translatedMessage[language]
+                  text: msgtxt
                 }
               );
               await verifyMessage(queueChangedMessage, ticket, ticket.contact);
-            }
+            }      
     }
 
     await ticket.update({
@@ -267,7 +242,8 @@ const UpdateTicketService = async ({
       userId,
       whatsappId,
       chatbot,
-      queueOptionId
+      queueOptionId,
+      lastMessage: lastMessage !== null ? lastMessage : ticket.lastMessage
     });
 
     await ticket.reload();
@@ -277,7 +253,7 @@ const UpdateTicketService = async ({
         whatsappId,
         queuedAt: moment().toDate(),
         startedAt: null,
-        userId: null
+        userId: null,
       });
     }
 
@@ -287,6 +263,7 @@ const UpdateTicketService = async ({
         ratingAt: null,
         rated: false,
         whatsappId,
+        lastMessage: lastMessage !== null ? lastMessage : ticket.lastMessage,
         userId: ticket.userId
       });
     }

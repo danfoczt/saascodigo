@@ -7,13 +7,14 @@ import ffmpegPath from "@ffmpeg-installer/ffmpeg";
 import AppError from "../../errors/AppError";
 import GetTicketWbot from "../../helpers/GetTicketWbot";
 import Ticket from "../../models/Ticket";
-import { lookup } from "mime-types";
+import mime from "mime-types";
 import formatBody from "../../helpers/Mustache";
 
 interface Request {
   media: Express.Multer.File;
   ticket: Ticket;
   body?: string;
+  isForwarded?: boolean;  
 }
 
 const publicFolder = path.resolve(__dirname, "..", "..", "..", "public");
@@ -51,7 +52,7 @@ export const getMessageOptions = async (
   pathMedia: string,
   body?: string
 ): Promise<any> => {
-  const mimeType = lookup(pathMedia) || "";
+  const mimeType = mime.lookup(pathMedia);
   const typeMessage = mimeType.split("/")[0];
 
   try {
@@ -63,7 +64,7 @@ export const getMessageOptions = async (
     if (typeMessage === "video") {
       options = {
         video: fs.readFileSync(pathMedia),
-        caption: body ? body : "",
+        caption: body ? body : '',
         fileName: fileName
         // gifPlayback: true
       };
@@ -117,7 +118,8 @@ export const getMessageOptions = async (
 const SendWhatsAppMedia = async ({
   media,
   ticket,
-  body
+  body,
+  isForwarded = false
 }: Request): Promise<WAMessage> => {
   try {
     const wbot = await GetTicketWbot(ticket);
@@ -125,13 +127,14 @@ const SendWhatsAppMedia = async ({
     const pathMedia = media.path;
     const typeMessage = media.mimetype.split("/")[0];
     let options: AnyMessageContent;
-    const bodyMessage = formatBody(body, ticket.contact);
+    const bodyMessage = formatBody(body, ticket.contact)
 
     if (typeMessage === "video") {
       options = {
         video: fs.readFileSync(pathMedia),
         caption: bodyMessage,
-        fileName: media.originalname
+        fileName: media.originalname,
+        contextInfo: { forwardingScore: isForwarded ? 2 : 0, isForwarded: isForwarded }
         // gifPlayback: true
       };
     } else if (typeMessage === "audio") {
@@ -141,13 +144,15 @@ const SendWhatsAppMedia = async ({
         options = {
           audio: fs.readFileSync(convert),
           mimetype: typeAudio ? "audio/mp4" : media.mimetype,
-          ptt: true
+          ptt: true,
+          contextInfo: { forwardingScore: isForwarded ? 2 : 0, isForwarded: isForwarded }
         };
       } else {
         const convert = await processAudioFile(media.path);
         options = {
           audio: fs.readFileSync(convert),
-          mimetype: typeAudio ? "audio/mp4" : media.mimetype
+          mimetype: typeAudio ? "audio/mp4" : media.mimetype,
+          contextInfo: { forwardingScore: isForwarded ? 2 : 0, isForwarded: isForwarded }
         };
       }
     } else if (typeMessage === "document" || typeMessage === "text") {
@@ -155,19 +160,22 @@ const SendWhatsAppMedia = async ({
         document: fs.readFileSync(pathMedia),
         caption: bodyMessage,
         fileName: media.originalname,
-        mimetype: media.mimetype
+        mimetype: media.mimetype,
+        contextInfo: { forwardingScore: isForwarded ? 2 : 0, isForwarded: isForwarded }
       };
     } else if (typeMessage === "application") {
       options = {
         document: fs.readFileSync(pathMedia),
         caption: bodyMessage,
         fileName: media.originalname,
-        mimetype: media.mimetype
+        mimetype: media.mimetype,
+        contextInfo: { forwardingScore: isForwarded ? 2 : 0, isForwarded: isForwarded }
       };
     } else {
       options = {
         image: fs.readFileSync(pathMedia),
-        caption: bodyMessage
+        caption: bodyMessage,
+        contextInfo: { forwardingScore: isForwarded ? 2 : 0, isForwarded: isForwarded }
       };
     }
 

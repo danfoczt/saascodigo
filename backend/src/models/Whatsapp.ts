@@ -21,7 +21,6 @@ import WhatsappQueue from "./WhatsappQueue";
 import Company from "./Company";
 import Prompt from "./Prompt";
 import QueueIntegrations from "./QueueIntegrations";
-import {FlowBuilderModel} from "./FlowBuilder";
 
 @Table
 class Whatsapp extends Model<Whatsapp> {
@@ -112,12 +111,12 @@ class Whatsapp extends Model<Whatsapp> {
 
   //@Column
   //sendIdQueue: number;
-
+  
   @Column
   transferQueueId: number;
 
   @Column
-  timeToTransfer: number;
+  timeToTransfer: number;  
 
   @ForeignKey(() => Prompt)
   @Column
@@ -141,20 +140,12 @@ class Whatsapp extends Model<Whatsapp> {
 
   @Column
   expiresTicket: number;
-
+  
+  @Column
+  number: string;
+  
   @Column
   expiresInactiveMessage: string;
-
-  @ForeignKey(() => FlowBuilderModel)
-  @Column
-  flowIdNotPhrase: number;
-
-  @ForeignKey(() => FlowBuilderModel)
-  @Column
-  flowIdWelcome: number;
-
-  @BelongsTo(() => FlowBuilderModel)
-  flowBuilder: FlowBuilderModel
 }
 
 export default Whatsapp;

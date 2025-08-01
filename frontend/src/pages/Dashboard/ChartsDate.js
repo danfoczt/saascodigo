@@ -18,7 +18,6 @@ import api from '../../services/api';
 import { format } from 'date-fns';
 import { toast } from 'react-toastify';
 import './button.css';
-import { i18n } from '../../translate/i18n';
 
 ChartJS.register(
     CategoryScale,
@@ -38,7 +37,7 @@ export const options = {
         },
         title: {
             display: true,
-            text: i18n.t("dashboard.charts.date.label"),
+            text: 'Gráfico de Conversas',
             position: 'left',
         },
         datalabels: {
@@ -89,14 +88,14 @@ export const ChartsDate = () => {
             const { data } = await api.get(`/dashboard/ticketsDay?initialDate=${format(initialDate, 'yyyy-MM-dd')}&finalDate=${format(finalDate, 'yyyy-MM-dd')}&companyId=${companyId}`);
             setTicketsData(data);
         } catch (error) {
-            toast.error(i18n.t("dashboard.toasts.dateChartError"));
+            toast.error('Erro ao buscar informações dos tickets');
         }
     }
 
     return (
         <>
             <Typography component="h2" variant="h6" color="primary" gutterBottom>
-                {i18n.t("dashboard.charts.date.title")} ({ticketsData?.count})
+                Total ({ticketsData?.count})
             </Typography>
 
             <Stack direction={'row'} spacing={2} alignItems={'center'} sx={{ my: 2, }} >
@@ -105,7 +104,7 @@ export const ChartsDate = () => {
                     <DatePicker
                         value={initialDate}
                         onChange={(newValue) => { setInitialDate(newValue) }}
-                        label={i18n.t("dashboard.charts.date.start")}
+                        label="Inicio"
                         renderInput={(params) => <TextField fullWidth {...params} sx={{ width: '20ch' }} />}
 
                     />
@@ -115,14 +114,12 @@ export const ChartsDate = () => {
                     <DatePicker
                         value={finalDate}
                         onChange={(newValue) => { setFinalDate(newValue) }}
-                        label={i18n.t("dashboard.charts.date.end")}
+                        label="Fim"
                         renderInput={(params) => <TextField fullWidth {...params} sx={{ width: '20ch' }} />}
                     />
                 </LocalizationProvider>
 
-                <Button className="buttonHover" onClick={handleGetTicketsInformation} variant='contained' >
-                    {i18n.t("dashboard.charts.date.filter")}
-                </Button>
+                <Button className="buttonHover" onClick={handleGetTicketsInformation} variant='contained' >Filtrar</Button>
 
             </Stack>
             <Bar options={options} data={dataCharts} style={{ maxWidth: '100%', maxHeight: '280px', }} />

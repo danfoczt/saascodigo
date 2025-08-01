@@ -18,7 +18,6 @@ import EditIcon from "@material-ui/icons/Edit";
 
 import ConfirmationModal from "../../components/ConfirmationModal";
 import api from "../../services/api";
-import { i18n } from "../../translate/i18n";
 
 const useStyles = makeStyles((theme) => ({
   mainContainer: {
@@ -118,12 +117,12 @@ export default function ChatList({
   return (
     <>
       <ConfirmationModal
-        title={i18n.t("chat.confirm.title")}
+        title={"Excluir Conversa"}
         open={confirmationModal}
         onClose={setConfirmModalOpen}
         onConfirm={handleDelete}
       >
-        {i18n.t("chat.confirm.message")}
+        Esta ação não pode ser revertida, confirmar?
       </ConfirmationModal>
       <div className={classes.mainContainer}>
         <div className={classes.chatList}>

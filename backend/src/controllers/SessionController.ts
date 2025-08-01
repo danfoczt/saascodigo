@@ -38,7 +38,6 @@ export const update = async (
   req: Request,
   res: Response
 ): Promise<Response> => {
-
   const token: string = req.cookies.jrt;
 
   if (!token) {

@@ -1,4 +1,4 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import { Link as RouterLink } from "react-router-dom";
 
 import Button from "@material-ui/core/Button";
@@ -12,12 +12,10 @@ import { makeStyles } from "@material-ui/core/styles";
 import Container from "@material-ui/core/Container";
 import { versionSystem } from "../../../package.json";
 import { i18n } from "../../translate/i18n";
+import api from "../../services/api";
 import { nomeEmpresa } from "../../../package.json";
 import { AuthContext } from "../../context/Auth/AuthContext";
-import logo from "../../assets/logo.png";
-import {LanguageOutlined} from "@material-ui/icons";
-import {IconButton, Menu, MenuItem} from "@material-ui/core";
-import LanguageControl from "../../components/LanguageControl";
+//import logo from "../../assets/logo.png";
 
 
 const Copyright = () => {
@@ -37,9 +35,8 @@ const useStyles = makeStyles(theme => ({
 	root: {
 		width: "100vw",
 		height: "100vh",
-		//background: "linear-gradient(to right, #682EE3 , #682EE3 , #682EE3)",
+		background: "linear-gradient(to right, #2f0549 , #a729f4 , #2f0549)",
 		//backgroundImage: "url(https://i.imgur.com/CGby9tN.png)",
-		backgroundColor: theme.palette.primary.main,
 		backgroundRepeat: "no-repeat",
 		backgroundSize: "100% 100%",
 		backgroundPosition: "center",
@@ -48,10 +45,9 @@ const useStyles = makeStyles(theme => ({
 		alignItems: "center",
 		justifyContent: "center",
 		textAlign: "center",
-		position: "relative"
 	},
 	paper: {
-		backgroundColor: theme.palette.login,
+		backgroundColor: theme.palette.login, //DARK MODE PLW DESIGN//
 		display: "flex",
 		flexDirection: "column",
 		alignItems: "center",
@@ -71,12 +67,6 @@ const useStyles = makeStyles(theme => ({
 	},
 	powered: {
 		color: "white"
-	},
-	languageControl: {
-		position: "absolute",
-		top: 0,
-		left: 0,
-		paddingLeft: 15
 	}
 }));
 
@@ -85,69 +75,48 @@ const Login = () => {
 
 	const [user, setUser] = useState({ email: "", password: "" });
 
-	// Languages
-	const [anchorElLanguage, setAnchorElLanguage] = useState(null);
-	const [menuLanguageOpen, setMenuLanguageOpen] = useState(false);
-
 	const { handleLogin } = useContext(AuthContext);
+	const [viewregister, setviewregister] = useState('disabled');
 
 	const handleChangeInput = e => {
 		setUser({ ...user, [e.target.name]: e.target.value });
 	};
+	
+	    useEffect(() => {
+    	fetchviewregister();
+  	}, []);
+	
+		const fetchviewregister = async () => {
+  
+ 
+    try {
+    	const responsev = await api.get("/settings/viewregister");
+      	const viewregisterX = responsev?.data?.value;
+      	// console.log(viewregisterX);
+      	setviewregister(viewregisterX);
+    	} catch (error) {
+    		console.error('Error retrieving viewregister', error);
+    	}
+  	};
+
 
 	const handlSubmit = e => {
 		e.preventDefault();
 		handleLogin(user);
 	};
-
-	const handlemenuLanguage = ( event ) => {
-		setAnchorElLanguage(event.currentTarget);
-		setMenuLanguageOpen( true );
-	}
-
-	const handleCloseMenuLanguage = (  ) => {
-		setAnchorElLanguage(null);
-		setMenuLanguageOpen(false);
-	}
 	
+	const logo = `${process.env.REACT_APP_BACKEND_URL}/public/logotipos/login.png`;
+    const randomValue = Math.random(); // Generate a random number
+  
+    const logoWithRandom = `${logo}?r=${randomValue}`;
+
 	return (
 		<div className={classes.root}>
-		<div className={classes.languageControl}>
-			<IconButton edge="start">
-				<LanguageOutlined
-					aria-label="account of current user"
-					aria-controls="menu-appbar"
-					aria-haspopup="true"
-					onClick={handlemenuLanguage}
-					variant="contained"
-					style={{ color: "white",marginRight:10 }}
-				/>
-			</IconButton>
-			<Menu
-				id="menu-appbar-language"
-				anchorEl={anchorElLanguage}
-				getContentAnchorEl={null}
-				anchorOrigin={{
-					vertical: "bottom",
-					horizontal: "right",
-				}}
-				transformOrigin={{
-					vertical: "top",
-					horizontal: "right",
-				}}
-				open={menuLanguageOpen}
-				onClose={handleCloseMenuLanguage}
-			>
-				<MenuItem>
-					<LanguageControl />
-				</MenuItem>
-			</Menu>
-		</div>
 		<Container component="main" maxWidth="xs">
 			<CssBaseline/>
 			<div className={classes.paper}>
 				<div>
-					<img style={{ margin: "0 auto", width: "70%" }} src={logo} alt="Whats" />
+					<img style={{ margin: "0 auto", width: "80%" }} src={logoWithRandom} alt={`${process.env.REACT_APP_NAME_SYSTEM}`} />
 				</div>
 				{/*<Typography component="h1" variant="h5">
 					{i18n.t("login.title")}
@@ -180,13 +149,14 @@ const Login = () => {
 						autoComplete="current-password"
 					/>
 					
-					{/* <Grid container justify="flex-end">
+					<Grid container justify="flex-end">
 					  <Grid item xs={6} style={{ textAlign: "right" }}>
 						<Link component={RouterLink} to="/forgetpsw" variant="body2">
 						  Esqueceu sua senha?
 						</Link>
 					  </Grid>
-					</Grid>*/}
+					</Grid>
+				
 					
 					<Button
 						type="submit"
@@ -197,7 +167,9 @@ const Login = () => {
 					>
 						{i18n.t("login.buttons.submit")}
 					</Button>
-					{ <Grid container>
+                    {viewregister === "enabled" && (
+                    <>
+					<Grid container>
 						<Grid item>
 							<Link
 								href="#"
@@ -208,7 +180,11 @@ const Login = () => {
 								{i18n.t("login.buttons.register")}
 							</Link>
 						</Grid>
-					</Grid> }
+					</Grid>
+                    </>
+                    )}
+				
+					
 				</form>
 			
 			</div>

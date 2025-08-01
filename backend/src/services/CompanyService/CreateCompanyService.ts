@@ -1,9 +1,8 @@
 import * as Yup from "yup";
 import AppError from "../../errors/AppError";
 import Company from "../../models/Company";
-import User from "../../models/User";
 import Setting from "../../models/Setting";
-import { hash } from "bcryptjs";
+import User from "../../models/User";
 
 interface CompanyData {
   name: string;
@@ -26,10 +25,10 @@ const CreateCompanyService = async (
     email,
     status,
     planId,
+    password,
     campaignsEnabled,
     dueDate,
-    recurrence,
-    password
+    recurrence
   } = companyData;
 
   const companySchema = Yup.object().shape({
@@ -68,13 +67,10 @@ const CreateCompanyService = async (
     recurrence
   });
 
-  const passwordHash = await hash(password || "123456", 8);
-
-  await User.create({
+  const user = await User.create({
     name: company.name,
     email: company.email,
-    password: password,
-    passwordHash,
+    password: password || "mudar123",
     profile: "admin",
     companyId: company.id
   });
@@ -208,7 +204,7 @@ const CreateCompanyService = async (
       value: "disabled"
     },
   });
-
+  
  // Enviar mensagem de transferencia
     await Setting.findOrCreate({
 	where:{

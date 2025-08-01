@@ -2,6 +2,7 @@ import * as Yup from "yup";
 import { Request, Response } from "express";
 import { getIO } from "../libs/socket";
 
+import Contact from "../models/Contact";
 import ListContactsService from "../services/ContactServices/ListContactsService";
 import CreateContactService from "../services/ContactServices/CreateContactService";
 import ShowContactService from "../services/ContactServices/ShowContactService";
@@ -17,8 +18,8 @@ import SimpleListService, {
   SearchContactParams
 } from "../services/ContactServices/SimpleListService";
 import ContactCustomField from "../models/ContactCustomField";
-import { logger } from "../utils/logger";
-import ToggleDisableBotContactService from "../services/ContactServices/ToggleDisableBotContactService";
+import {head} from "lodash";
+import {ImportContacts} from "../services/ContactServices/ImportContacts";
 
 type IndexQuery = {
   searchParam: string;
@@ -73,7 +74,7 @@ export const getContact = async (
 export const store = async (req: Request, res: Response): Promise<Response> => {
   const { companyId } = req.user;
   const newContact: ContactData = req.body;
-  newContact.number = newContact.number.replace(/\D/g, '');
+  newContact.number = newContact.number.replace("-", "").replace(" ", "");
 
   const schema = Yup.object().shape({
     name: Yup.string().required(),
@@ -82,42 +83,49 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
       .matches(/^\d+$/, "Invalid number format. Only numbers is allowed.")
   });
 
-  const contact = await createNewContact(newContact,companyId,schema);
+  try {
+    await schema.validate(newContact);
+  } catch (err: any) {
+    throw new AppError(err.message);
+  }
+
+  await CheckIsValidContact(newContact.number, companyId);
+  const validNumber = await CheckContactNumber(newContact.number, companyId);
+  const number = validNumber.jid.replace(/\D/g, "");
+  newContact.number = number;
+
+    // Check if the contact already exists
+    const existingContact = await Contact.findOne({
+      where: {
+        number: newContact.number,
+        companyId
+      }
+    });
+    
+    if (existingContact) {
+      // Contact already exists, send the existing contact data as the response
+      return res.status(200).json({ alreadyExists: true, existingContact });
+    }
+
+  /**
+   * Código desabilitado por demora no retorno
+   */
+  // const profilePicUrl = await GetProfilePicUrl(validNumber.jid, companyId);
+
+  const contact = await CreateContactService({
+    ...newContact,
+    // profilePicUrl,
+    companyId
+  });
+
+  const io = getIO();
+  io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-contact`, {
+    action: "create",
+    contact
+  });
 
   return res.status(200).json(contact);
 };
-
-export const storeUpload = async (req: Request, res: Response) : Promise<Response> => {
-
-  const {companyId} = req.user;
-  const contacts = req.body;
-
-  let errorBag = [];
-  let contactAdded = [];
-
-  const schema = Yup.object().shape({
-    name: Yup.string().required(),
-    number: Yup.string().required()
-  });
-
-  const promises = contacts.map(async contact => {
-
-    const newContact : ContactData = {name: contact.Nome, number: contact.Telefone.replace(/\D/g, '')}
-
-    try{
-
-      const contact = await createUploadedContact( newContact, companyId, schema )
-      contactAdded.push( {contactName: contact.name, contactId: contact.id} );
-
-    }catch(e){
-      errorBag.push({contactName: contact.Nome, error: e || e.message});
-    }
-  });
-
-  await Promise.all(promises);
-
-  return res.status(200).json({newContacts: contactAdded, errorBag: errorBag});
-}
 
 export const show = async (req: Request, res: Response): Promise<Response> => {
   const { contactId } = req.params;
@@ -135,8 +143,6 @@ export const update = async (
   const contactData: ContactData = req.body;
   const { companyId } = req.user;
 
-  contactData.number = contactData.number.replace(/\D/g, '');
-
   const schema = Yup.object().shape({
     name: Yup.string(),
     number: Yup.string().matches(
@@ -150,8 +156,6 @@ export const update = async (
   } catch (err: any) {
     throw new AppError(err.message);
   }
-
-  contactData.number = contactData.number.replace(/\D/g, "");
 
   await CheckIsValidContact(contactData.number, companyId);
   const validNumber = await CheckContactNumber(contactData.number, companyId);
@@ -204,79 +208,52 @@ export const list = async (req: Request, res: Response): Promise<Response> => {
   return res.json(contacts);
 };
 
-const createNewContact = async ( newContact : ContactData, companyId : number, schema : any ) => {
+export const upload = async (req: Request, res: Response) => {
+  const files = req.files as Express.Multer.File[];
+  const file: Express.Multer.File = head(files) as Express.Multer.File;
+  const { companyId } = req.user;
 
-    try{
-      await schema.validate(newContact);
-    }catch(err:any){
-      throw new AppError(err.message);
-    }
+  const response = await ImportContacts(companyId, file);
 
-    logger.info(newContact);
+  const io = getIO();
 
-    await CheckIsValidContact(newContact.number, companyId);
-    const number = newContact.number.replace(/\D/g, "");
-    const validNumber = await CheckContactNumber(number, companyId);
-
-    if( !validNumber )
-      throw new AppError("Não foi possível localizar o número informado no Whatsapp");
-
-    newContact.number = number;
-
-    /**
-     * Código desabilitado por demora no retorno
-     */
-    // const profilePicUrl = await GetProfilePicUrl(validNumber.jid, companyId);
-
-    const contact = await CreateContactService({
-      ...newContact,
-      // profilePicUrl,
-      companyId
-    });
-
-    const io = getIO();
-    io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-contact`, {
-      action: "create",
-      contact
-    });
-
-    return contact;
-}
-
-const createUploadedContact = async ( newContact : ContactData, companyId : number, schema : any) => {
-
-  try{
-    await schema.validate(newContact);
-  }catch(err:any){
-    throw new AppError(err.message);
-  }
-
-  newContact.number = newContact.number.replace(/\D/g, "");
-  const contact = await CreateContactService({
-    ...newContact,
-    companyId
+  io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-contact`, {
+    action: "create",
+    records: response
   });
 
-  const io = getIO();
-    io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-contact`, {
-      action: "create",
-      contact
-    });
+  return res.status(200).json(response);
+};
 
-  return contact;
-}
-
-export const toggleDisableBot = async (req: Request, res: Response): Promise<Response> => {
-  var { contactId } = req.params;
+export const getContactVcard = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const { name, number } = req.query as IndexGetContactQuery;
   const { companyId } = req.user;
-  const contact = await ToggleDisableBotContactService({ contactId });
 
-  const io = getIO();
-  io.of(String(companyId))
-    .emit(`company-${companyId}-contact`, {
-      action: "update",
-      contact
-    });
+  let vNumber = number;
+  const numberDDI = vNumber.toString().substr(0, 2);
+  const numberDDD = vNumber.toString().substr(2, 2);
+  const numberUser = vNumber.toString().substr(-8, 8);
+
+  if (numberDDD <= '30' && numberDDI === '55') {
+    console.log("menor 30")
+    vNumber = `${numberDDI + numberDDD + 9 + numberUser}@s.whatsapp.net`;
+  } else if (numberDDD > '30' && numberDDI === '55') {
+    console.log("maior 30")
+    vNumber = `${numberDDI + numberDDD + numberUser}@s.whatsapp.net`;
+  } else {
+    vNumber = `${number}@s.whatsapp.net`;
+  }
+
+  console.log(vNumber);
+
+  const contact = await GetContactService({
+    name,
+    number,
+    companyId
+  });
 
   return res.status(200).json(contact);
 };

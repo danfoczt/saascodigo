@@ -37,11 +37,6 @@ import Files from "../models/Files";
 import FilesOptions from "../models/FilesOptions";
 import Prompt from "../models/Prompt";
 import QueueIntegrations from "../models/QueueIntegrations";
-import { FlowDefaultModel } from "../models/FlowDefault";
-import { FlowBuilderModel } from "../models/FlowBuilder";
-import { FlowAudioModel } from "../models/FlowAudio";
-import { FlowCampaignModel } from "../models/FlowCampaign";
-import { FlowImgModel } from "../models/FlowImg";
 
 // eslint-disable-next-line
 const dbConfig = require("../config/database");
@@ -88,11 +83,6 @@ const models = [
   FilesOptions,
   Prompt,
   QueueIntegrations,
-  FlowDefaultModel,
-  FlowBuilderModel,
-  FlowAudioModel,
-  FlowCampaignModel,
-  FlowImgModel,
 ];
 
 sequelize.addModels(models);

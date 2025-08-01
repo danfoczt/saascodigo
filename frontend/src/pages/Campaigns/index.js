@@ -1,44 +1,43 @@
 /* eslint-disable no-unused-vars */
 
-import React, { useState, useEffect, useReducer, useContext } from "react";
+import React, { useContext, useEffect, useReducer, useState } from "react";
 import { toast } from "react-toastify";
 
 import { useHistory } from "react-router-dom";
 
-import { makeStyles } from "@material-ui/core/styles";
-import Paper from "@material-ui/core/Paper";
 import Button from "@material-ui/core/Button";
+import IconButton from "@material-ui/core/IconButton";
+import InputAdornment from "@material-ui/core/InputAdornment";
+import Paper from "@material-ui/core/Paper";
 import Table from "@material-ui/core/Table";
 import TableBody from "@material-ui/core/TableBody";
 import TableCell from "@material-ui/core/TableCell";
 import TableHead from "@material-ui/core/TableHead";
 import TableRow from "@material-ui/core/TableRow";
-import IconButton from "@material-ui/core/IconButton";
-import SearchIcon from "@material-ui/icons/Search";
 import TextField from "@material-ui/core/TextField";
-import InputAdornment from "@material-ui/core/InputAdornment";
+import { makeStyles } from "@material-ui/core/styles";
+import SearchIcon from "@material-ui/icons/Search";
 
 import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
-import EditIcon from "@material-ui/icons/Edit";
 import DescriptionIcon from "@material-ui/icons/Description";
-import TimerOffIcon from "@material-ui/icons/TimerOff";
-import PlayCircleOutlineIcon from "@material-ui/icons/PlayCircleOutline";
+import EditIcon from "@material-ui/icons/Edit";
 import PauseCircleOutlineIcon from "@material-ui/icons/PauseCircleOutline";
+import PlayCircleOutlineIcon from "@material-ui/icons/PlayCircleOutline";
 
 import MainContainer from "../../components/MainContainer";
 import MainHeader from "../../components/MainHeader";
 import Title from "../../components/Title";
 
-import api from "../../services/api";
-import { i18n } from "../../translate/i18n";
-import TableRowSkeleton from "../../components/TableRowSkeleton";
-import CampaignModal from "../../components/CampaignModal";
-import ConfirmationModal from "../../components/ConfirmationModal";
-import toastError from "../../errors/toastError";
 import { Grid } from "@material-ui/core";
 import { isArray } from "lodash";
-import { useDate } from "../../hooks/useDate";
+import CampaignModal from "../../components/CampaignModal";
+import ConfirmationModal from "../../components/ConfirmationModal";
+import TableRowSkeleton from "../../components/TableRowSkeleton";
 import { SocketContext } from "../../context/Socket/SocketContext";
+import toastError from "../../errors/toastError";
+import { useDate } from "../../hooks/useDate";
+import api from "../../services/api";
+import { i18n } from "../../translate/i18n";
 
 const reducer = (state, action) => {
   if (action.type === "LOAD_CAMPAIGNS") {
@@ -204,15 +203,15 @@ const Campaigns = () => {
   const formatStatus = (val) => {
     switch (val) {
       case "INATIVA":
-        return i18n.t("campaigns.status.inactive");
+        return "Inativa";
       case "PROGRAMADA":
-        return i18n.t("campaigns.status.programmed");
+        return "Programada";
       case "EM_ANDAMENTO":
-        return i18n.t("campaigns.status.inProgress");
+        return "Em Andamento";
       case "CANCELADA":
-        return i18n.t("campaigns.status.canceled");
+        return "Cancelada";
       case "FINALIZADA":
-        return i18n.t("campaigns.status.finished");
+        return "Finalizada";
       default:
         return val;
     }
@@ -328,6 +327,9 @@ const Campaigns = () => {
               <TableCell align="center">
                 {i18n.t("campaigns.table.completedAt")}
               </TableCell>
+              {/* <TableCell align="center">
+                {i18n.t("campaigns.table.confirmation")}
+              </TableCell> */}
               <TableCell align="center">
                 {i18n.t("campaigns.table.actions")}
               </TableCell>
@@ -344,28 +346,31 @@ const Campaigns = () => {
                   <TableCell align="center">
                     {campaign.contactListId
                       ? campaign.contactList.name
-                      : i18n.t("campaigns.table.notDefined")}
+                      : "Não definida"}
                   </TableCell>
                   <TableCell align="center">
                     {campaign.whatsappId
                       ? campaign.whatsapp.name
-                      : i18n.t("campaigns.table.notDefined2")}
+                      : "Não definido"}
                   </TableCell>
                   <TableCell align="center">
                     {campaign.scheduledAt
                       ? datetimeToClient(campaign.scheduledAt)
-                      : i18n.t("campaigns.table.notScheduled")}
+                      : "Sem agendamento"}
                   </TableCell>
                   <TableCell align="center">
                     {campaign.completedAt
                       ? datetimeToClient(campaign.completedAt)
-                      : i18n.t("campaigns.table.notConcluded")}
+                      : "Não concluída"}
                   </TableCell>
+                  {/* <TableCell align="center">
+                    {campaign.confirmation ? "Habilitada" : "Desabilitada"}
+                  </TableCell> */}
                   <TableCell align="center">
                     {campaign.status === "EM_ANDAMENTO" && (
                       <IconButton
                         onClick={() => cancelCampaign(campaign)}
-                        title={i18n.t("campaigns.table.stopCampaign")}
+                        title="Parar Campanha"
                         size="small"
                       >
                         <PauseCircleOutlineIcon />
@@ -374,7 +379,7 @@ const Campaigns = () => {
                     {campaign.status === "CANCELADA" && (
                       <IconButton
                         onClick={() => restartCampaign(campaign)}
-                        title={i18n.t("campaigns.table.stopCampaign")}
+                        title="Parar Campanha"
                         size="small"
                       >
                         <PlayCircleOutlineIcon />

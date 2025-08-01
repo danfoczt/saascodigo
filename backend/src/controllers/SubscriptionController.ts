@@ -7,8 +7,9 @@ import AppError from "../errors/AppError";
 import options from "../config/Gn";
 import Company from "../models/Company";
 import Invoices from "../models/Invoices";
+import Subscriptions from "../models/Subscriptions";
 import { getIO } from "../libs/socket";
-import {logger} from "../utils/logger";
+import UpdateUserService from "../services/UserServices/UpdateUserService";
 
 const app = express();
 
@@ -32,7 +33,7 @@ export const createSubscription = async (
   });
 
   if (!(await schema.isValid(req.body))) {
-    throw new AppError("Validation fails 1", 400);
+    throw new AppError("Validation fails", 400);
   }
 
   const {
@@ -58,8 +59,7 @@ export const createSubscription = async (
     },
     chave: process.env.GERENCIANET_PIX_KEY,
     solicitacaoPagador: `#Fatura:${invoiceId}`
-  };
-
+    };
   try {
     const pix = await gerencianet.pixCreateImmediateCharge(null, body);
 
@@ -67,15 +67,36 @@ export const createSubscription = async (
       id: pix.loc.id
     });
 
-    let bodyWebhook = {
-      webhookUrl: `${process.env.BACKEND_URL}/subscription/webhook?ignorar=`
-    };
+    const updateCompany = await Company.findOne();
 
-    const params = {
-      chave: pix.chave
-    };
+    if (!updateCompany) {
+      throw new AppError("Company not found", 404);
+    }
 
-    await gerencianet.pixConfigWebhook(params, bodyWebhook);
+
+/*     await Subscriptions.create({
+      companyId,
+      isActive: false,
+      userPriceCents: users,
+      whatsPriceCents: connections,
+      lastInvoiceUrl: pix.location,
+      lastPlanChange: new Date(),
+      providerSubscriptionId: pix.loc.id,
+      expiresAt: new Date()
+    }); */
+
+/*     const { id } = req.user;
+    const userData = {};
+    const userId = id;
+    const requestUserId = parseInt(id);
+    const user = await UpdateUserService({ userData, userId, companyId, requestUserId }); */
+
+    /*     const io = getIO();
+        io.emit("user", {
+          action: "update",
+          user
+        }); */
+
 
     return res.json({
       ...pix,
@@ -83,23 +104,21 @@ export const createSubscription = async (
 
     });
   } catch (error) {
-    logger.error(error);
-    throw new AppError("Validation fails 2", 400);
+    throw new AppError("Validation fails", 400);
   }
 };
 
-export const  createWebhook = async (
+export const createWebhook = async (
   req: Request,
   res: Response
 ): Promise<Response> => {
-
   const schema = Yup.object().shape({
     chave: Yup.string().required(),
     url: Yup.string().required()
   });
 
   if (!(await schema.isValid(req.body))) {
-    throw new AppError("Validation fails 3", 400);
+    throw new AppError("Validation fails", 400);
   }
 
   const { chave, url } = req.body;
@@ -125,21 +144,19 @@ export const webhook = async (
   req: Request,
   res: Response
   ): Promise<Response> => {
-
+  const { type } = req.params;
   const { evento } = req.body;
-
   if (evento === "teste_webhook") {
     return res.json({ ok: true });
   }
-
   if (req.body.pix) {
     const gerencianet = Gerencianet(options);
-    for (const pix of req.body.pix) {
+    req.body.pix.forEach(async (pix: any) => {
       const detahe = await gerencianet.pixDetailCharge({
         txid: pix.txid
       });
 
-      if (detahe.status === "CONCLUIDA"){
+      if (detahe.status === "CONCLUIDA") {
         const { solicitacaoPagador } = detahe;
         const invoiceID = solicitacaoPagador.replace("#Fatura:", "");
         const invoices = await Invoices.findByPk(invoiceID);
@@ -173,7 +190,7 @@ export const webhook = async (
         }
 
       }
-    }
+    });
 
   }
 

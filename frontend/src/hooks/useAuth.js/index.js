@@ -29,74 +29,28 @@ const useAuth = () => {
     }
   );
 
-  let isRefreshing = false;
-  let failedRequestsQueue = [];
-
   api.interceptors.response.use(
     (response) => {
       return response;
     },
     async (error) => {
       const originalRequest = error.config;
-
       if (error?.response?.status === 403 && !originalRequest._retry) {
-        if (isRefreshing) {
-          return new Promise((resolve, reject) => {
-            failedRequestsQueue.push({ resolve, reject });
-          })
-            .then((token) => {
-              originalRequest.headers.Authorization = `Bearer ${token}`;
-              return api(originalRequest);
-            })
-            .catch((err) => {
-              return Promise.reject(err);
-            });
-        }
-
         originalRequest._retry = true;
-        isRefreshing = true;
 
-        try {
-          const { data } = await api.post("/auth/refresh_token");
-
-          if (data) {
-            localStorage.setItem("token", JSON.stringify(data.token));
-            api.defaults.headers.Authorization = `Bearer ${data.token}`;
-
-            failedRequestsQueue.forEach((request) => {
-              request.resolve(data.token);
-            });
-            failedRequestsQueue = [];
-          }
-
-          return api(originalRequest);
-        } catch (refreshError) {
-          failedRequestsQueue.forEach((request) => {
-            request.reject(refreshError);
-          });
-          failedRequestsQueue = [];
-
-          localStorage.removeItem("token");
-          localStorage.removeItem("companyId");
-          api.defaults.headers.Authorization = undefined;
-          setIsAuth(false);
-
-          return Promise.reject(refreshError);
-        } finally {
-          isRefreshing = false;
+        const { data } = await api.post("/auth/refresh_token");
+        if (data) {
+          localStorage.setItem("token", JSON.stringify(data.token));
+          api.defaults.headers.Authorization = `Bearer ${data.token}`;
         }
+        return api(originalRequest);
       }
-
-      if (
-        error?.response?.status === 401 ||
-        (error?.response?.status === 403 && originalRequest._retry)
-      ) {
+      if (error?.response?.status === 401) {
         localStorage.removeItem("token");
         localStorage.removeItem("companyId");
         api.defaults.headers.Authorization = undefined;
         setIsAuth(false);
       }
-
       return Promise.reject(error);
     }
   );
@@ -123,6 +77,7 @@ const useAuth = () => {
   useEffect(() => {
     const companyId = localStorage.getItem("companyId");
     if (companyId) {
+   
       const socket = socketManager.getSocket(companyId);
 
       socket.on(`company-${companyId}-user`, (data) => {
@@ -130,11 +85,12 @@ const useAuth = () => {
           setUser(data.user);
         }
       });
-
-      return () => {
-        socket.disconnect();
-      };
-    }
+    
+    
+    return () => {
+      socket.disconnect();
+    };
+  }
   }, [socketManager, user]);
 
   const handleLogin = async (userData) => {
@@ -155,7 +111,7 @@ const useAuth = () => {
         }
       }
 
-      moment.locale("pt-br");
+      moment.locale('pt-br');
       const dueDate = data.user.company.dueDate;
       const hoje = moment(moment()).format("DD/MM/yyyy");
       const vencimento = moment(dueDate).format("DD/MM/yyyy");
@@ -175,11 +131,7 @@ const useAuth = () => {
         setIsAuth(true);
         toast.success(i18n.t("auth.toasts.success"));
         if (Math.round(dias) < 5) {
-          toast.warn(
-            `Sua assinatura vence em ${Math.round(dias)} ${
-              Math.round(dias) === 1 ? "dia" : "dias"
-            } `
-          );
+          toast.warn(`Sua assinatura vence em ${Math.round(dias)} ${Math.round(dias) === 1 ? 'dia' : 'dias'} `);
         }
         history.push("/tickets");
         setLoading(false);
@@ -189,7 +141,7 @@ Entre em contato com o Suporte para mais informações! `);
         setLoading(false);
       }
 
-      //quebra linha
+      //quebra linha 
     } catch (err) {
       toastError(err);
       setLoading(false);
