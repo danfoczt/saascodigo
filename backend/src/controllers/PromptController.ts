@@ -39,12 +39,12 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   const [, token] = authHeader.split(" ");
   const decoded = verify(token, authConfig.secret);
   const { companyId } = decoded as TokenPayload;
-  const { name, apiKey, prompt, maxTokens, temperature, promptTokens, completionTokens, totalTokens, queueId, maxMessages, model} = req.body;
-  const promptTable = await CreatePromptService({ name, apiKey, prompt, maxTokens, temperature, promptTokens, completionTokens, totalTokens, queueId, maxMessages, companyId, model });
+  const { name, apiKey, prompt, maxTokens, temperature, promptTokens, completionTokens, totalTokens, queueId, maxMessages,voice,voiceKey,voiceRegion } = req.body;
+  const promptTable = await CreatePromptService({ name, apiKey, prompt, maxTokens, temperature, promptTokens, completionTokens, totalTokens, queueId, maxMessages, companyId,voice,voiceKey,voiceRegion });
 
   const io = getIO();
-  io.to(`company-${companyId}-mainchannel`).emit("prompt", {
-    action: "update",
+  io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-prompt`, {
+    action: "create",
     prompt: promptTable
   });
 
@@ -76,7 +76,7 @@ export const update = async (
   const prompt = await UpdatePromptService({ promptData, promptId: promptId, companyId });
 
   const io = getIO();
-  io.to(`company-${companyId}-mainchannel`).emit("prompt", {
+  io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-prompt`, {
     action: "update",
     prompt
   });
@@ -101,9 +101,9 @@ export const remove = async (
     await DeletePromptService(promptId, companyId);
 
     const io = getIO();
-    io.to(`company-${companyId}-mainchannel`).emit("prompt", {
+    io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-prompt`, {
       action: "delete",
-      intelligenceId: +promptId
+      promptId: +promptId
     });
 
     return res.status(200).json({ message: "Prompt deleted" });
@@ -111,4 +111,3 @@ export const remove = async (
     return res.status(500).json({ message: "Não foi possível excluir! Verifique se este prompt está sendo usado!" });
   }
 };
-

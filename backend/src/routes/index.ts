@@ -4,6 +4,7 @@ import userRoutes from "./userRoutes";
 import authRoutes from "./authRoutes";
 import settingRoutes from "./settingRoutes";
 import contactRoutes from "./contactRoutes";
+import groupRoutes from "./groupRoutes";
 import ticketRoutes from "./ticketRoutes";
 import whatsappRoutes from "./whatsappRoutes";
 import messageRoutes from "./messageRoutes";
@@ -31,15 +32,26 @@ import filesRoutes from "./filesRoutes";
 import promptRoutes from "./promptRouter";
 import queueIntegrationRoutes from "./queueIntegrationRoutes";
 import forgotsRoutes from "./forgotPasswordRoutes";
-import flowDefaultRoutes from "./flowDefaultRoutes";
-import flowBuilder from "./flowBuilderRoutes";
-import flowCampaignRoutes from "./flowCampaignRoutes";
+import versionRouter from "./versionRoutes";
+import reportsRoutes from './reportsRoutes';
+
+import hubNotificaMeRoutes from "./hubNotificaMeRoutes";
+
+import hubChannelRoutes from "./hubChannelRoutes";
+import hubMessageRoutes from "./hubMessageRoutes";
+import hubWebhookRoutes from "./hubWebhookRoutes";
+
+/*import webhookMetaRouter from "./webhookMeta";
+
+import webhookInstagramRouter from "./webhookInstagram";*/
+
 const routes = Router();
 
 routes.use(userRoutes);
 routes.use("/auth", authRoutes);
 routes.use(settingRoutes);
 routes.use(contactRoutes);
+routes.use(groupRoutes);
 routes.use(ticketRoutes);
 routes.use(whatsappRoutes);
 routes.use(messageRoutes);
@@ -68,9 +80,17 @@ routes.use(filesRoutes);
 routes.use(promptRoutes);
 routes.use(queueIntegrationRoutes);
 routes.use(forgotsRoutes);
+routes.use(reportsRoutes);
+routes.use(versionRouter);
 
-routes.use(flowDefaultRoutes);
-routes.use(flowBuilder)
-routes.use(flowCampaignRoutes)
+routes.use(hubNotificaMeRoutes);
+
+routes.use(hubChannelRoutes);
+routes.use(hubMessageRoutes);
+routes.use(hubWebhookRoutes);
+
+/*routes.use(webhookMetaRouter);
+
+routes.use(webhookInstagramRouter);*/
 
 export default routes;

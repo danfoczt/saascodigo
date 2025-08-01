@@ -51,7 +51,6 @@ const NewTicketModal = ({ modalOpen, onClose, initialContact }) => {
   const [selectedWhatsapp, setSelectedWhatsapp] = useState("");
   const [newContact, setNewContact] = useState({});
   const [whatsapps, setWhatsapps] = useState([]);
-  const [queues, setQueues] = useState([]);
   const [contactModalOpen, setContactModalOpen] = useState(false);
   const { user } = useContext(AuthContext);
   const { companyId, whatsappId } = user;
@@ -80,35 +79,10 @@ const NewTicketModal = ({ modalOpen, onClose, initialContact }) => {
         setSelectedWhatsapp(whatsappId)
       }
 
-      const fetchQueues = async (  ) => {
-
-        if( user.profile !== "admin" ){
-
-          setQueues( user.queues );
-          
-          if (user.queues.length === 1) {
-            setSelectedQueue(user.queues[0].id)
-          }
-
-          return;
-        }
-
-        try{
-
-          const {data: queues} = await api.get('/queue');
-          setQueues( queues )
-
-          if( queues.length === 1) {
-            setSelectedQueue(queues[0].id)
-          }
-
-        }catch(err){
-          toastError(i18n.t("newTicketModal.searchQueueError"));       
-        }        
+      if (user.queues.length === 1) {
+        setSelectedQueue(user.queues[0].id)
       }
-
-      fetchQueues(  );
-      fetchContacts(  );
+      fetchContacts();
       setLoading(false);
     }, 500);
     return () => clearTimeout(delayDebounceFn);
@@ -171,7 +145,7 @@ const NewTicketModal = ({ modalOpen, onClose, initialContact }) => {
   const handleSaveTicket = async contactId => {
     if (!contactId) return;
     if (selectedQueue === "" && user.profile !== 'admin') {
-      toast.error(i18n.t("newTicketModal.selectQueue"));
+      toast.error("Selecione uma fila");
       return;
     }
     
@@ -190,14 +164,9 @@ const NewTicketModal = ({ modalOpen, onClose, initialContact }) => {
       onClose(ticket);
     } catch (err) {
       
-      console.log(err);
-      const ticket  = err.response.data.error;
-      console.log(ticket);
+      const ticket  = JSON.parse(err.response.data.error);
 
-      if( ticket === "ERR_OTHER_OPEN_TICKET" )
-        toastError(err);
-      
-      if ( ticket !== "ERR_OTHER_OPEN_TICKET" && ticket.userId !== user?.id) {
+      if (ticket.userId !== user?.id) {
         setOpenAlert(true);
         setUserTicketOpen(ticket.user.name);
         setQueueTicketOpen(ticket.queue.name);
@@ -349,15 +318,14 @@ const NewTicketModal = ({ modalOpen, onClose, initialContact }) => {
                 }}
                 renderValue={() => {
                   if (selectedQueue === "") {
-                    return i18n.t("newTicketModal.selectQueue")
+                    return "Selecione uma fila"
                   }
-
-                  const queue = queues.find(q => q.id === selectedQueue)
+                  const queue = user.queues.find(q => q.id === selectedQueue)
                   return queue.name
                 }}
               >
-                {queues?.length > 0 &&
-                  queues.map((queue, key) => (
+                {user.queues?.length > 0 &&
+                  user.queues.map((queue, key) => (
                     <MenuItem dense key={key} value={queue.id}>
                       <ListItemText primary={queue.name} />
                     </MenuItem>
@@ -389,7 +357,7 @@ const NewTicketModal = ({ modalOpen, onClose, initialContact }) => {
                 }}
                 renderValue={() => {
                   if (selectedWhatsapp === "") {
-                    return i18n.t("newTicketModal.selectConection")
+                    return "Selecione uma Conexão"
                   }
                   const whatsapp = whatsapps.find(w => w.id === selectedWhatsapp)
                   return whatsapp.name

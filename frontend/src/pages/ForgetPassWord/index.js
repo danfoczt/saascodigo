@@ -20,12 +20,12 @@ import Container from "@material-ui/core/Container";
 import api from "../../services/api";
 import { i18n } from "../../translate/i18n";
 import moment from "moment";
-import logo from "../../assets/logo.png";
 import { toast } from 'react-toastify'; 
 import toastError from '../../errors/toastError';
 import 'react-toastify/dist/ReactToastify.css';
 import { BrowserRouter as Router, Route, Switch } from "react-router-dom";
 
+const logo = `${process.env.REACT_APP_BACKEND_URL}/public/logotipos/login.png`;
 const useStyles = makeStyles((theme) => ({
   root: {
     width: "100vw",
@@ -103,24 +103,24 @@ const ForgetPassword = () => {
   const [user] = useState(initialState);
   const dueDate = moment().add(3, "day").format();
 
-const handleSendEmail = async (values) => {
-  const email = values.email;
-  try {
-    const response = await api.post(
-      `${process.env.REACT_APP_BACKEND_URL}/forgetpassword/${email}`
-    );
-    console.log("API Response:", response.data);
+  const handleSendEmail = async (values) => {
+    const email = values.email;
+    try {
+      const response = await api.post(
+        `${process.env.REACT_APP_BACKEND_URL}/forgetpassword/${email}`
+      );
+      console.log("API Response:", response.data);
 
-    if (response.data.status === 404) {
-      toast.error(i18n.t("resetPassword.toasts.emailNotFound"));
-    } else {
-      toast.success(i18n.t("resetPassword.toasts.emailSent"));
+      if (response.data.status === 404) {
+        toast.error("Email não encontrado");
+      } else {
+        toast.success(i18n.t("Email enviado com sucesso!"));
+      }
+    } catch (err) {
+      console.log("API Error:", err);
+      toastError(err);
     }
-  } catch (err) {
-    console.log("API Error:", err);
-    toastError(err);
-  }
-};
+  };
 
   const handleResetPassword = async (values) => {
     const email = values.email;
@@ -130,35 +130,40 @@ const handleSendEmail = async (values) => {
 
     if (newPassword === confirmPassword) {
       try {
-        await api.post(
-          `${process.env.REACT_APP_BACKEND_URL}/resetpasswords/${email}/${token}/${newPassword}`
-        );
+        await api.post(`${process.env.REACT_APP_BACKEND_URL}/resetpasswords`, {
+          email,
+          token,
+          password: newPassword
+        });
         setError(""); // Limpe o erro se não houver erro
-        toast.success(i18n.t("resetPassword.toasts.passwordUpdated"));
+        toast.success(i18n.t("Senha redefinida com sucesso."));
         history.push("/login");
       } catch (err) {
         console.log(err);
+        toastError(err);
       }
+    } else {
+      setError("As senhas não correspondem");
     }
   };
 
   const isResetPasswordButtonClicked = showResetPasswordButton;
   const UserSchema = Yup.object().shape({
-    email: Yup.string().email(i18n.t("resetPassword.formErrors.email.invalid")).required(i18n.t("resetPassword.formErrors.email.required")),
+    email: Yup.string().email("Invalid email").required("Required"),
     newPassword: isResetPasswordButtonClicked
       ? Yup.string()
-          .required(i18n.t("resetPassword.formErrors.newPassword.required"))
+          .required("Campo obrigatório")
           .matches(
             passwordRegex,
-            i18n.t("resetPassword.formErrors.newPassword.matches")
+            "Sua senha precisa ter no mínimo 8 caracteres, sendo uma letra maiúscula, uma minúscula e um número."
           )
-      : Yup.string(), // Sem validação se não for redefinição de senha
+      : Yup.string(),
     confirmPassword: Yup.string().when("newPassword", {
       is: (newPassword) => isResetPasswordButtonClicked && newPassword,
       then: Yup.string()
-        .oneOf([Yup.ref("newPassword"), null], i18n.t("resetPassword.formErrors.confirmPassword.matches"))
-        .required(i18n.t("resetPassword.formErrors.confirmPassword.required")),
-      otherwise: Yup.string(), // Sem validação se não for redefinição de senha
+        .oneOf([Yup.ref("newPassword"), null], "As senhas não correspondem")
+        .required("Campo obrigatório"),
+      otherwise: Yup.string(),
     }),
   });
 
@@ -175,7 +180,7 @@ const handleSendEmail = async (values) => {
             />
           </div>
           <Typography component="h1" variant="h5">
-            {i18n.t("resetPassword.title")}
+            {i18n.t("Redefinir senha")}
           </Typography>
           <Formik
             initialValues={{
@@ -207,7 +212,7 @@ const handleSendEmail = async (values) => {
                       variant="outlined"
                       fullWidth
                       id="email"
-                      label={i18n.t("resetPassword.form.email")}
+                      label={i18n.t("signup.form.email")}
                       name="email"
                       error={touched.email && Boolean(errors.email)}
                       helperText={touched.email && errors.email}
@@ -223,7 +228,7 @@ const handleSendEmail = async (values) => {
                           variant="outlined"
                           fullWidth
                           id="token"
-                          label={i18n.t("resetPassword.form.verificationCode")}
+                          label="Código de Verificação"
                           name="token"
                           error={touched.token && Boolean(errors.token)}
                           helperText={touched.token && errors.token}
@@ -238,7 +243,7 @@ const handleSendEmail = async (values) => {
                           fullWidth
                           type={showPassword ? "text" : "password"}
                           id="newPassword"
-                          label={i18n.t("resetPassword.form.newPassword")}
+                          label="Nova senha"
                           name="newPassword"
                           error={
                             touched.newPassword &&
@@ -273,7 +278,7 @@ const handleSendEmail = async (values) => {
                           fullWidth
                           type={showConfirmPassword ? "text" : "password"}
                           id="confirmPassword"
-                          label={i18n.t("resetPassword.form.confirmPassword")}
+                          label="Confirme a senha"
                           name="confirmPassword"
                           error={
                             touched.confirmPassword &&
@@ -313,7 +318,7 @@ const handleSendEmail = async (values) => {
                     color="primary"
                     className={classes.submit}
                   >
-                    {i18n.t("resetPassword.buttons.submitPassword")}
+                    Redefinir Senha
                   </Button>
                 ) : (
                   <Button
@@ -323,7 +328,7 @@ const handleSendEmail = async (values) => {
                     color="primary"
                     className={classes.submit}
                   >
-{                    i18n.t("resetPassword.buttons.submitEmail")}
+                    Enviar Email
                   </Button>
                 )}
                 <Grid container justifyContent="flex-end">
@@ -334,7 +339,7 @@ const handleSendEmail = async (values) => {
                       component={RouterLink}
                       to="/signup"
                     >
-                      {i18n.t("resetPassword.buttons.back")}
+                      {i18n.t("Não tem uma conta? Cadastre-se!")}
                     </Link>
                   </Grid>
                 </Grid>

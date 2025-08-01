@@ -96,6 +96,16 @@ const useWhatsApps = () => {
       }
     });
 
+    // Eventos para canais Instagram/Facebook
+    socket.on(`company-${companyId}-hubnotificame`, (data) => {
+      if (data.action === "create") {
+        dispatch({ type: "UPDATE_WHATSAPPS", payload: data.record });
+      }
+      if (data.action === "delete") {
+        dispatch({ type: "DELETE_WHATSAPPS", payload: data.id });
+      }
+    });
+
     return () => {
       socket.disconnect();
     };

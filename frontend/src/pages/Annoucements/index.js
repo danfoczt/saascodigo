@@ -113,7 +113,7 @@ const Announcements = () => {
   useEffect(() => {
     async function fetchData() {
       if (!user.super) {
-        toast.error(i18n.t("announcements.toasts.info"));
+        toast.error("Esta empresa não possui permissão para acessar essa página! Estamos lhe redirecionando.");
         setTimeout(() => {
           history.push(`/`)
         }, 1000);
@@ -216,13 +216,13 @@ const Announcements = () => {
 
   const translatePriority = (val) => {
     if (val === 1) {
-      return i18n.t("announcements.high");
+      return "Alta";
     }
     if (val === 2) {
-      return i18n.t("announcements.medium");
+      return "Média";
     }
     if (val === 3) {
-      return i18n.t("announcements.low");
+      return "Baixa";
     }
   };
 

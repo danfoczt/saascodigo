@@ -26,11 +26,10 @@ import formInitialValues from "./FormModel/formInitialValues";
 
 import useStyles from "./styles";
 import Invoices from "../../pages/Financeiro";
-import { i18n } from "../../translate/i18n";
 
 
 export default function CheckoutPage(props) {
-  const steps = [i18n.t("checkoutPage.steps.data"), i18n.t("checkoutPage.steps.customize"), i18n.t("checkoutPage.steps.review")];
+  const steps = ["Dados", "Personalizar", "Revisar"];
   const { formId, formField } = checkoutFormModel;
   
   
@@ -49,7 +48,7 @@ function _renderStepContent(step, setFieldValue, setActiveStep, values ) {
     case 0:
       return <AddressForm formField={formField} values={values} setFieldValue={setFieldValue}  />;
     case 1:
-      return <PaymentForm
+      return <PaymentForm 
       formField={formField} 
       setFieldValue={setFieldValue} 
       setActiveStep={setActiveStep} 
@@ -91,7 +90,7 @@ function _renderStepContent(step, setFieldValue, setActiveStep, values ) {
       setDatePayment(data)
       actions.setSubmitting(false);
       setActiveStep(activeStep + 1);
-      toast.success(i18n.t("checkoutPage.success"));
+      toast.success("Assinatura realizada com sucesso!, aguardando a realização do pagamento");
     } catch (err) {
       toastError(err);
     }
@@ -114,7 +113,7 @@ function _renderStepContent(step, setFieldValue, setActiveStep, values ) {
   return (
     <React.Fragment>
       <Typography component="h1" variant="h4" align="center">
-        {i18n.t("checkoutPage.closeToEnd")}
+        Falta pouco!
       </Typography>
       <Stepper activeStep={activeStep} className={classes.stepper}>
         {steps.map((label) => (
@@ -142,7 +141,7 @@ function _renderStepContent(step, setFieldValue, setActiveStep, values ) {
                 <div className={classes.buttons}>
                   {activeStep !== 1 && (
                     <Button onClick={_handleBack} className={classes.button}>
-                      {i18n.t("checkoutPage.BACK")}
+                      VOLTAR
                     </Button>
                   )}
                   <div className={classes.wrapper}>
@@ -154,7 +153,7 @@ function _renderStepContent(step, setFieldValue, setActiveStep, values ) {
                         color="primary"
                         className={classes.button}
                       >
-                        {isLastStep ? i18n.t("checkoutPage.PAY") : i18n.t("checkoutPage.NEXT")}
+                        {isLastStep ? "PAGAR" : "PRÓXIMO"}
                       </Button>
                     )}
                     {isSubmitting && (

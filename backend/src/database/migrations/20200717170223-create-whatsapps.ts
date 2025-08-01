@@ -23,7 +23,7 @@ module.exports = {
       },
       plugged: {
         type: DataTypes.BOOLEAN
-      },
+      },	  
       createdAt: {
         type: DataTypes.DATE,
         allowNull: false
@@ -31,6 +31,9 @@ module.exports = {
       updatedAt: {
         type: DataTypes.DATE,
         allowNull: false
+      },
+      type: {
+        type: DataTypes.STRING
       }
     });
   },

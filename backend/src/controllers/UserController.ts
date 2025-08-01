@@ -11,7 +11,6 @@ import ShowUserService from "../services/UserServices/ShowUserService";
 import DeleteUserService from "../services/UserServices/DeleteUserService";
 import SimpleListService from "../services/UserServices/SimpleListService";
 import User from "../models/User";
-import SetLanguageCompanyService from "../services/UserServices/SetLanguageCompanyService";
 
 type IndexQuery = {
   searchParam: string;
@@ -45,11 +44,13 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     companyId: bodyCompanyId,
     queueIds,
     whatsappId,
-	allTicket
+    allTicket
   } = req.body;
-  let userCompanyId: number | null = null;
 
-  let requestUser: User = null;
+  const whatsappNumber = typeof req.body.whatsappNumber === "string" ? req.body.whatsappNumber.trim() : null;
+
+  let userCompanyId: number | null = null;
+  let requestUser: User | null = null;
 
   if (req.user !== undefined) {
     const { companyId: cId } = req.user;
@@ -77,7 +78,8 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     companyId: newUserCompanyId,
     queueIds,
     whatsappId,
-	allTicket
+    allTicket,
+    whatsappNumber
   });
 
   const io = getIO();
@@ -91,23 +93,20 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
 
 export const show = async (req: Request, res: Response): Promise<Response> => {
   const { userId } = req.params;
-
   const user = await ShowUserService(userId);
-
   return res.status(200).json(user);
 };
 
-export const update = async (
-  req: Request,
-  res: Response
-): Promise<Response> => {
-  if (req.user.profile !== "admin") {
-    throw new AppError("ERR_NO_PERMISSION", 403);
-  }
-
+export const update = async (req: Request, res: Response): Promise<Response> => {
   const { id: requestUserId, companyId } = req.user;
   const { userId } = req.params;
   const userData = req.body;
+
+  if (typeof userData.whatsappNumber !== "string") {
+    userData.whatsappNumber = null;
+  } else {
+    userData.whatsappNumber = userData.whatsappNumber.trim();
+  }
 
   const user = await UpdateUserService({
     userData,
@@ -125,10 +124,7 @@ export const update = async (
   return res.status(200).json(user);
 };
 
-export const remove = async (
-  req: Request,
-  res: Response
-): Promise<Response> => {
+export const remove = async (req: Request, res: Response): Promise<Response> => {
   const { userId } = req.params;
   const { companyId } = req.user;
 
@@ -157,15 +153,3 @@ export const list = async (req: Request, res: Response): Promise<Response> => {
 
   return res.status(200).json(users);
 };
-
-export const setLanguage = async (req: Request, res: Response): Promise<Response> => {
-  const { companyId } = req.user;
-  const {newLanguage} = req.params;
-
-  if( newLanguage !== "pt" && newLanguage !== "en" && newLanguage !== "es" )
-    throw new AppError("ERR_INTERNAL_SERVER_ERROR", 500);
-
-  await SetLanguageCompanyService( companyId, newLanguage );
-
-  return res.status(200).json({message: "Language updated successfully"});
-}

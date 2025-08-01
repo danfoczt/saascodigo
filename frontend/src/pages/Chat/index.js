@@ -25,7 +25,6 @@ import { has, isObject } from "lodash";
 
 import { AuthContext } from "../../context/Auth/AuthContext";
 import withWidth, { isWidthUp } from "@material-ui/core/withWidth";
-import { i18n } from "../../translate/i18n";
 
 const useStyles = makeStyles((theme) => ({
   mainContainer: {
@@ -83,12 +82,12 @@ export function ChatModal({
   const handleSave = async () => {
     try {
       if (!title) {
-        alert(i18n.t("chat.toasts.fillTitle"));
+        alert("Por favor, preencha o título da conversa.");
         return;
       }
 
       if (!users || users.length === 0) {
-        alert(i18n.t("chat.toasts.fillUser"));
+        alert("Por favor, selecione pelo menos um usuário.");
         return;
       }
 
@@ -115,13 +114,13 @@ export function ChatModal({
       aria-labelledby="alert-dialog-title"
       aria-describedby="alert-dialog-description"
     >
-      <DialogTitle id="alert-dialog-title">{i18n.t("chat.modal.title")}</DialogTitle>
+      <DialogTitle id="alert-dialog-title">Conversa</DialogTitle>
       <DialogContent>
         <Grid spacing={2} container>
           <Grid xs={12} style={{ padding: 18 }} item>
             <TextField
-              label={i18n.t("chat.modal.titleField")}
-              placeholder={i18n.t("chat.modal.titleField")}
+              label="Título"
+              placeholder="Título"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               variant="outlined"
@@ -139,10 +138,10 @@ export function ChatModal({
       </DialogContent>
       <DialogActions>
         <Button onClick={handleClose} color="primary">
-          {i18n.t("chat.buttons.close")}
+          Fechar
         </Button>
         <Button onClick={handleSave} color="primary" variant="contained">
-          {i18n.t("chat.buttons.save")}
+          Salvar
         </Button>
       </DialogActions>
     </Dialog>
@@ -345,7 +344,7 @@ function Chat(props) {
                 color="primary"
                 variant="contained"
               >
-                {i18n.t("chat.buttons.new")}
+                Nova
               </Button>
             </div>
           
@@ -389,8 +388,8 @@ function Chat(props) {
             onChange={(e, v) => setTab(v)}
             aria-label="disabled tabs example"
           >
-            <Tab label={i18n.t("chat.chats")} />
-            <Tab label={i18n.t("chat.messages")} />
+            <Tab label="Chats" />
+            <Tab label="Mensagens" />
           </Tabs>
         </Grid>
         {tab === 0 && (
@@ -401,7 +400,7 @@ function Chat(props) {
                 color="primary"
                 variant="contained"
               >
-                {i18n.t("chat.buttons.newChat")}
+                Novo
               </Button>
             </div>
             <ChatList

@@ -14,6 +14,7 @@ interface UserData {
   queueIds?: number[];
   whatsappId?: number;
   allTicket?: string;
+  whatsappNumber?: string;
 }
 
 interface Request {
@@ -52,7 +53,7 @@ const UpdateUserService = async ({
 	allTicket: Yup.string()
   });
 
-  const { email, password, profile, name, queueIds = [], whatsappId, allTicket } = userData;
+  const { email, password, profile, name, queueIds = [], whatsappId, allTicket, whatsappNumber } = userData;
 
   try {
     await schema.validate({ email, password, profile, name, allTicket });
@@ -66,7 +67,8 @@ const UpdateUserService = async ({
     profile,
     name,
     whatsappId: whatsappId || null,
-	allTicket
+	allTicket,
+  whatsappNumber
   });
 
   await user.$set("queues", queueIds);

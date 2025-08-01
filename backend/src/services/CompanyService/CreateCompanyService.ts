@@ -1,9 +1,9 @@
 import * as Yup from "yup";
 import AppError from "../../errors/AppError";
 import Company from "../../models/Company";
-import User from "../../models/User";
 import Setting from "../../models/Setting";
-import { hash } from "bcryptjs";
+import User from "../../models/User";
+import Group from "../../models/Group";
 
 interface CompanyData {
   name: string;
@@ -26,10 +26,10 @@ const CreateCompanyService = async (
     email,
     status,
     planId,
+    password,
     campaignsEnabled,
     dueDate,
-    recurrence,
-    password
+    recurrence
   } = companyData;
 
   const companySchema = Yup.object().shape({
@@ -68,13 +68,10 @@ const CreateCompanyService = async (
     recurrence
   });
 
-  const passwordHash = await hash(password || "123456", 8);
-
-  await User.create({
+  const user = await User.create({
     name: company.name,
     email: company.email,
-    password: password,
-    passwordHash,
+    password: password || "mudar123",
     profile: "admin",
     companyId: company.id
   });
@@ -208,7 +205,7 @@ const CreateCompanyService = async (
       value: "disabled"
     },
   });
-
+  
  // Enviar mensagem de transferencia
     await Setting.findOrCreate({
 	where:{
@@ -301,6 +298,38 @@ const CreateCompanyService = async (
     if (!created) {
       await setting.update({ value: `${campaignsEnabled}` });
     }
+  }
+
+  // Copiar grupos da Empresa 1 para a nova empresa
+  try {
+    // Verificar se a Empresa 1 existe
+    const templateCompany = await Company.findByPk(1);
+    
+    if (templateCompany) {
+      // Buscar grupos da Empresa 1 (empresa principal)
+      const templateGroups = await Group.findAll({
+        where: { companyId: 1 },
+        order: [["name", "ASC"]]
+      });
+
+      // Se existirem grupos na Empresa 1, copiar para a nova empresa
+      if (templateGroups.length > 0) {
+        const newGroups = templateGroups.map(group => ({
+          name: group.name,
+          companyId: company.id
+        }));
+
+        await Group.bulkCreate(newGroups);
+        console.log(`Copiados ${templateGroups.length} grupos da Empresa 1 para a nova empresa ${company.name}`);
+      } else {
+        console.log("Empresa 1 não possui grupos para copiar");
+      }
+    } else {
+      console.log("Empresa 1 não encontrada, não será possível copiar grupos");
+    }
+  } catch (error) {
+    // Se houver erro na cópia dos grupos, não falhar a criação da empresa
+    console.error("Erro ao copiar grupos para nova empresa:", error);
   }
 
   return company;

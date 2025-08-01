@@ -34,6 +34,9 @@ class User extends Model<User> {
   name: string;
 
   @Column
+  whatsappNumber: string;
+
+  @Column
   email: string;
   
   @Column
@@ -91,6 +94,9 @@ class User extends Model<User> {
 
   @BelongsTo(() => Whatsapp)
   whatsapp: Whatsapp;
+
+  @Column({ type: DataType.STRING, allowNull: true })
+  resetPassword: string;
 
   @BeforeUpdate
   @BeforeCreate

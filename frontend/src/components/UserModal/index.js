@@ -4,20 +4,28 @@ import * as Yup from "yup";
 import { Formik, Form, Field } from "formik";
 import { toast } from "react-toastify";
 
+import {
+	Button,
+	Dialog,
+	DialogActions,
+	DialogContent,
+	DialogTitle,
+	CircularProgress,
+	Select,
+	InputLabel,
+	MenuItem,
+	FormControl,
+	TextField,
+	InputAdornment,
+	IconButton,
+	Switch,
+	FormControlLabel
+  } from '@material-ui/core';
+  
+import { Visibility, VisibilityOff } from '@material-ui/icons';
+
 import { makeStyles } from "@material-ui/core/styles";
 import { green } from "@material-ui/core/colors";
-import Button from "@material-ui/core/Button";
-import TextField from "@material-ui/core/TextField";
-import Dialog from "@material-ui/core/Dialog";
-import DialogActions from "@material-ui/core/DialogActions";
-import DialogContent from "@material-ui/core/DialogContent";
-import DialogTitle from "@material-ui/core/DialogTitle";
-import CircularProgress from "@material-ui/core/CircularProgress";
-import Select from "@material-ui/core/Select";
-import InputLabel from "@material-ui/core/InputLabel";
-import MenuItem from "@material-ui/core/MenuItem";
-import FormControl from "@material-ui/core/FormControl";
-
 import { i18n } from "../../translate/i18n";
 
 import api from "../../services/api";
@@ -59,11 +67,11 @@ const useStyles = makeStyles(theme => ({
 
 const UserSchema = Yup.object().shape({
 	name: Yup.string()
-		.min(2, i18n.t("userModal.formErrors.name.short"))
-		.max(50, i18n.t("userModal.formErrors.name.long"))
-		.required(i18n.t("userModal.formErrors.name.required")),
-	password: Yup.string().min(5, i18n.t("userModal.formErrors.password.short")).max(50, i18n.t("userModal.formErrors.password.long")),
-	email: Yup.string().email(i18n.t("userModal.formErrors.email.invalid")).required(i18n.t("userModal.formErrors.email.required")),
+		.min(2, "Too Short!")
+		.max(50, "Too Long!")
+		.required("Required"),
+	password: Yup.string().min(5, "Too Short!").max(50, "Too Long!"),
+	email: Yup.string().email("Invalid email").required("Required"),
 });
 
 const UserModal = ({ open, onClose, userId }) => {
@@ -74,7 +82,8 @@ const UserModal = ({ open, onClose, userId }) => {
 		email: "",
 		password: "",
 		profile: "user",
-		allTicket: "desabled"
+		allTicket: "desabled",
+		whatsappNumber: "" // Adicionado aqui
 	};
 
 	const { user: loggedInUser } = useContext(AuthContext);
@@ -82,7 +91,9 @@ const UserModal = ({ open, onClose, userId }) => {
 	const [user, setUser] = useState(initialState);
 	const [selectedQueueIds, setSelectedQueueIds] = useState([]);
 	const [whatsappId, setWhatsappId] = useState(false);
+	const [showPassword, setShowPassword] = useState(false);
 	const { loading, whatsApps } = useWhatsApps();
+
 
 	useEffect(() => {
 		const fetchUser = async () => {
@@ -109,6 +120,7 @@ const UserModal = ({ open, onClose, userId }) => {
 	};
 
 	const handleSaveUser = async values => {
+		console.log("Dados enviados do formulário:", values); // Adicione isso
 		const userData = { ...values, whatsappId, queueIds: selectedQueueIds, allTicket: values.allTicket };
 		try {
 			if (userId) {
@@ -165,14 +177,26 @@ const UserModal = ({ open, onClose, userId }) => {
 									/>
 									<Field
 										as={TextField}
-										label={i18n.t("userModal.form.password")}
-										type="password"
 										name="password"
-										error={touched.password && Boolean(errors.password)}
-										helperText={touched.password && errors.password}
 										variant="outlined"
 										margin="dense"
 										fullWidth
+										label={i18n.t("userModal.form.password")}
+										error={touched.password && Boolean(errors.password)}
+										helperText={touched.password && errors.password}
+										type={showPassword ? 'text' : 'password'}
+										InputProps={{
+										endAdornment: (
+											<InputAdornment position="end">
+											<IconButton
+												aria-label="toggle password visibility"
+												onClick={() => setShowPassword((e) => !e)}
+											>
+												{showPassword ? <VisibilityOff /> : <Visibility />}
+											</IconButton>
+											</InputAdornment>
+										)
+										}}
 									/>
 								</div>
 								<div className={classes.multFieldLine}>
@@ -248,16 +272,7 @@ const UserModal = ({ open, onClose, userId }) => {
 											</Field>
 										</FormControl>
 									)}
-								/>
-								
-								
-								
-								<div className={classes.divider}>
-									<span className={classes.dividerText}>
-										{i18n.t("userModal.labels.liberations")}
-									</span>
-								</div>
-								
+								/>										
 								<Can
 									role={loggedInUser.profile}
 									perform="user-modal:editProfile"
@@ -291,6 +306,18 @@ const UserModal = ({ open, onClose, userId }) => {
 
 									)}
 								/>
+
+								<div className={classes.multFieldLine}>
+								  <Field
+								    as={TextField}
+								    label={i18n.t("WhatsApp Conectado")}
+								    name="whatsappNumber"
+								    variant="outlined"
+								    margin="dense"
+								    fullWidth
+								    placeholder="Ex.: 559285549606"
+								  />
+								</div>
 								
 							</DialogContent>
 							<DialogActions>

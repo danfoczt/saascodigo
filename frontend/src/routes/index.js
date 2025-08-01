@@ -9,6 +9,7 @@ import Signup from "../pages/Signup/";
 import Login from "../pages/Login/";
 import Connections from "../pages/Connections/";
 import SettingsCustom from "../pages/SettingsCustom/";
+import Relatorios from "../pages/Relatórios";
 import Financeiro from "../pages/Financeiro/";
 import Users from "../pages/Users";
 import Contacts from "../pages/Contacts/";
@@ -18,6 +19,7 @@ import MessagesAPI from "../pages/MessagesAPI/";
 import Helps from "../pages/Helps/";
 import ContactLists from "../pages/ContactLists/";
 import ContactListItems from "../pages/ContactListItems/";
+import { ForwardMessageProvider } from "../context/ForwarMessage/ForwardMessageContext";
 // import Companies from "../pages/Companies/";
 import QuickMessages from "../pages/QuickMessages/";
 import Kanban from "../pages/Kanban";
@@ -25,6 +27,7 @@ import { AuthProvider } from "../context/Auth/AuthContext";
 import { TicketsContextProvider } from "../context/Tickets/TicketsContext";
 import { WhatsAppsProvider } from "../context/WhatsApp/WhatsAppsContext";
 import Route from "./Route";
+//import kanbanSchedules from "../pages/kanbanSchedules/";
 import Schedules from "../pages/Schedules";
 import Campaigns from "../pages/Campaigns";
 import CampaignsConfig from "../pages/CampaignsConfig";
@@ -36,10 +39,13 @@ import Subscription from "../pages/Subscription/";
 import Files from "../pages/Files/";
 import Prompts from "../pages/Prompts";
 import QueueIntegration from "../pages/QueueIntegration";
+import LogPlw from "../pages/LogPlw";
+
+/* ROTAS ADICIONADAS AO PROJETO */
+/*import HubNotificaMe from "../pages/HubNotificaMe";*/
+import Typebot from "../pages/Typebot/";
+
 import ForgetPassword from "../pages/ForgetPassWord/"; // Reset PassWd
-import CampaignsPhrase from "../pages/CampaignsPhrase";
-import FlowBuilder from "../pages/FlowBuilder";
-import FlowBuilderConfig from "../pages/FlowBuilderConfig";
 
 const Routes = () => {
   const [showCampaigns, setShowCampaigns] = useState(false);
@@ -54,11 +60,12 @@ const Routes = () => {
   return (
     <BrowserRouter>
       <AuthProvider>
+	  <ForwardMessageProvider>
         <TicketsContextProvider>
           <Switch>
             <Route exact path="/login" component={Login} />
             <Route exact path="/signup" component={Signup} />
-            <Route exact path="/forgetpsw" component={ForgetPassword} />
+			<Route exact path="/forgetpsw" component={ForgetPassword} /> 
             {/* <Route exact path="/create-company" component={Companies} /> */}
             <WhatsAppsProvider>
               <LoggedInLayout>
@@ -81,7 +88,12 @@ const Routes = () => {
                   component={QuickMessages}
                   isPrivate
                 />
-                <Route exact path="/todolist" component={ToDoList} isPrivate />
+                <Route
+                  exact
+                  path="/todolist"
+                  component={ToDoList}
+                  isPrivate
+                  />
                 <Route
                   exact
                   path="/schedules"
@@ -94,13 +106,9 @@ const Routes = () => {
                 <Route exact path="/users" component={Users} isPrivate />
                 <Route exact path="/files" component={Files} isPrivate />
                 <Route exact path="/prompts" component={Prompts} isPrivate />
-                <Route
-                  exact
-                  path="/queue-integration"
-                  component={QueueIntegration}
-                  isPrivate
-                />
-
+				<Route exact path="/logplw" component={LogPlw} isPrivate />
+                <Route exact path="/queue-integration" component={QueueIntegration} isPrivate />
+					{/*<Route exact path="/kanban-schedules" component={kanbanSchedules} isPrivate />*/}
                 <Route
                   exact
                   path="/messages-api"
@@ -113,7 +121,18 @@ const Routes = () => {
                   component={SettingsCustom}
                   isPrivate
                 />
-                <Route exact path="/kanban" component={Kanban} isPrivate />
+				        <Route 
+                  exact
+                  path="/kanban"
+                  component={Kanban}
+                  isPrivate
+                />
+				<Route
+                  exact
+                  path="/relatorios"
+                  component={Relatorios}
+                  isPrivate
+                />				
                 <Route
                   exact
                   path="/financeiro"
@@ -167,31 +186,29 @@ const Routes = () => {
                       isPrivate
                     />
 
-                    <Route
-                      exact
-                      path="/phrase-lists"
-                      component={CampaignsPhrase}
-                      isPrivate
-                    />
-                    <Route
-                      exact
-                      path="/flowbuilders"
-                      component={FlowBuilder}
-                      isPrivate
-                    />
-                    <Route
-                      exact
-                      path="/flowbuilder/:id?"
-                      component={FlowBuilderConfig}
-                      isPrivate
-                    />
+                     {/* Nova rota Typebot */}
+                      <Route
+                        exact
+                        path="/typebot"
+                        component={Typebot}
+                        isPrivate
+                      />
+
+                      {/* Nova rota HubNotificaMe 
+                      <Route
+                        exact
+                        path="/hub-notificame"
+                        component={HubNotificaMe}
+                        isPrivate
+                      />*/}
                   </>
                 )}
               </LoggedInLayout>
             </WhatsAppsProvider>
           </Switch>
-          <ToastContainer autoClose={3000} />
+          <ToastContainer autoClose={2000} />
         </TicketsContextProvider>
+		</ForwardMessageProvider>
       </AuthProvider>
     </BrowserRouter>
   );

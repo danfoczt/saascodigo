@@ -71,17 +71,26 @@ export const uploadMedias = async (req: Request, res: Response): Promise<Respons
     if (files.length > 0) {
 
       for (const [index, file] of files.entries()) {
+        const currentId = Array.isArray(id) ? id[index] : id;
         fileOpt = await FilesOptions.findOne({
           where: {
             fileId,
-            id: Array.isArray(id)? id[index] : id
+            id: currentId
           }
         });
 
-        fileOpt.update({
+        if (!fileOpt) {
+          console.error(`FilesOptions não encontrado para fileId=${fileId}, id=${currentId}`);
+          continue;
+        }
+
+        await fileOpt.update({
           path: file.filename.replace('/','-'),
-          mediaType: Array.isArray(mediaType)? mediaType[index] : mediaType
-        }) ;
+          mediaType: Array.isArray(mediaType)? mediaType[index] : mediaType,
+          name: Array.isArray(req.body.name)? req.body.name[index] : req.body.name,
+          message: Array.isArray(req.body.message)? req.body.message[index] : req.body.message
+        });
+        console.log(`FilesOptions atualizado: fileId=${fileId}, id=${currentId}, path=${file.filename}`);
       }
     }
     

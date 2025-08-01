@@ -15,7 +15,7 @@ import Company from "./Company";
 import ContactList from "./ContactList";
 import Whatsapp from "./Whatsapp";
 import Files from "./Files";
-import Tag from "./Tag";
+import { DataTypes } from "sequelize";
 
 @Table({ tableName: "Campaigns" })
 class Campaign extends Model<Campaign> {
@@ -42,8 +42,26 @@ class Campaign extends Model<Campaign> {
   @Column({ defaultValue: "" })
   message5: string;
 
+  @Column({ defaultValue: "" })
+  confirmationMessage1: string;
+
+  @Column({ defaultValue: "" })
+  confirmationMessage2: string;
+
+  @Column({ defaultValue: "" })
+  confirmationMessage3: string;
+
+  @Column({ defaultValue: "" })
+  confirmationMessage4: string;
+
+  @Column({ defaultValue: "" })
+  confirmationMessage5: string;
+
   @Column({ defaultValue: "INATIVA" })
-  status: string; // INATIVA, PROGRAMADA, EM_ANDAMENTO, CANCELADA, FINALIZADA
+  status: string; // INATIVA, PROGRAMADA, EM_ANDAMENTO, CANCELADA, FINALIZADA, PARCIALMENTE_CONCLUÍDA
+
+  @Column
+  confirmation: boolean;
 
   @Column
   mediaPath: string;
@@ -57,18 +75,20 @@ class Campaign extends Model<Campaign> {
   @Column
   completedAt: Date;
 
+  @Column({ defaultValue: 0, type: DataTypes.DECIMAL(5, 2) })
+  successRate: number;
+
+  @Column
+  lastDeliveryAt: Date;
+
+  @Column
+  timeoutAt: Date;
+
   @CreatedAt
   createdAt: Date;
 
   @UpdatedAt
   updatedAt: Date;
-
-  @ForeignKey(() => Tag)
-  @Column
-  tagId: number;
-
-  @BelongsTo(() => Tag)
-  tag: Tag;
 
   @ForeignKey(() => Company)
   @Column

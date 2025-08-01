@@ -16,13 +16,16 @@ import Typography from "@material-ui/core/Typography";
 import IconButton from "@material-ui/core/IconButton";
 import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
 import CircularProgress from "@material-ui/core/CircularProgress";
-
+import FormControlLabel from "@material-ui/core/FormControlLabel";
+import Switch from "@material-ui/core/Switch";
+import Select from "@material-ui/core/Select";
+import MenuItem from "@material-ui/core/MenuItem";
+import FormControl from "@material-ui/core/FormControl";
+import InputLabel from "@material-ui/core/InputLabel";
 import { i18n } from "../../translate/i18n";
 
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
-
-import InputMask from 'react-input-mask';
 
 const useStyles = makeStyles(theme => ({
 	root: {
@@ -54,23 +57,20 @@ const useStyles = makeStyles(theme => ({
 	},
 }));
 
-const MaskedTextField = ({ field, form, ...props }) => {
-	return (
-	  <InputMask {...field} {...props}>
-		{(inputProps) => <TextField {...inputProps} />}
-	  </InputMask>
-	);
-};
-
+/*const phoneRegExp =
+  /^((\\+[1-9]{1,4}[ \\-]*)|(\\([0-9]{2,3}\\)[ \\-]*)|([0-9]{2,4})[ \\-]*)*?[0-9]{3,4}?[ \\-]*[0-9]{3,4}?$/;
+*/  
 const ContactSchema = Yup.object().shape({
-	name: Yup.string()
-		.min(2, i18n.t("contactModal.formErrors.name.short"))
-		.max(50, i18n.t("contactModal.formErrors.name.long"))
-		.required(i18n.t("contactModal.formErrors.name.required")),
-	number: Yup.string().min(8, 
-		i18n.t("contactModal.formErrors.phone.short")).max(50, 
-		i18n.t("contactModal.formErrors.phone.long")),
-	email: Yup.string().email(i18n.t("contactModal.formErrors.email.invalid")),
+  name: Yup.string()
+    .min(2, "Too Short!")
+    .max(50, "Too Long!")
+    .required("Required"),
+  /*number: Yup.string()
+    .min(12, "Número inválido")
+    .max(16, "Número inválido")
+    .matches(phoneRegExp, "Número inválido")
+    .required("Informe o número"),*/
+  email: Yup.string().email("Email inválido"),
 });
 
 const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
@@ -81,14 +81,29 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 		name: "",
 		number: "",
 		email: "",
+		disableBot: false,
+		groupId: ""
 	};
 
 	const [contact, setContact] = useState(initialState);
+	const [groups, setGroups] = useState([]);
 
 	useEffect(() => {
 		return () => {
 			isMounted.current = false;
 		};
+	}, []);
+
+	useEffect(() => {
+		const fetchGroups = async () => {
+			try {
+				const { data } = await api.get("/groups");
+				setGroups(data);
+			} catch (err) {
+				toastError(err);
+			}
+		};
+		fetchGroups();
 	}, []);
 
 	useEffect(() => {
@@ -105,10 +120,7 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 				const { data } = await api.get(`/contacts/${contactId}`);
 				if (isMounted.current) {
 					console.log(data)
-					setContact({
-						...data,
-						number: data.number,
-					});
+					setContact(data);
 				}
 			} catch (err) {
 				toastError(err);
@@ -136,8 +148,8 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 				handleClose();
 			}
 			toast.success(i18n.t("contactModal.success"));
-		} catch (e) {	
-			toastError(e);
+		} catch (err) {
+			toastError(err);
 		}
 	};
 
@@ -179,15 +191,14 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 								/>
 								<Field
 									as={TextField}
-									name="number"
 									label={i18n.t("contactModal.form.number")}
+									name="number"
 									error={touched.number && Boolean(errors.number)}
 									helperText={touched.number && errors.number}
-									placeholder=""
+									placeholder="5541998608485"
 									variant="outlined"
 									margin="dense"
 								/>
-
 								<div>
 									<Field
 										as={TextField}
@@ -201,12 +212,45 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 										variant="outlined"
 									/>
 								</div>
-								<Typography
-									style={{ marginBottom: 8, marginTop: 12 }}
-									variant="subtitle1"
-								>
-									{i18n.t("contactModal.form.whatsapp")} {contact?.whatsapp ? contact?.whatsapp.name : ""}
-								</Typography>
+								<div>
+									<FormControl fullWidth margin="dense" variant="outlined">
+										<InputLabel>Grupo</InputLabel>
+										<Field
+											as={Select}
+											name="groupId"
+											value={values.groupId || ""}
+											onChange={(e) => {
+												setContact({ ...values, groupId: e.target.value });
+											}}
+										>
+											<MenuItem value="">
+												<em>Selecione um grupo</em>
+											</MenuItem>
+											{groups.map((group) => (
+												<MenuItem key={group.id} value={group.id}>
+													{group.name}
+												</MenuItem>
+											))}
+										</Field>
+									</FormControl>
+								</div>
+								<>
+								<FormControlLabel
+									label={i18n.t("contactModal.form.disableBot")}
+									labelPlacement="start"
+									control={
+										<Switch
+											size="small"
+											checked={values.disableBot}
+											onChange={() =>
+                        setContact({ ...values, disableBot: !values.disableBot })
+											}
+											name="disableBot"
+											color="primary"
+										/>
+									}
+								/>
+								</>
 								<Typography
 									style={{ marginBottom: 8, marginTop: 12 }}
 									variant="subtitle1"

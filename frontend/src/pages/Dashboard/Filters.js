@@ -40,17 +40,17 @@ const Filters = ({
                     {/* <Grid item xs={12} sm={6} md={3}>
                         <FormControl fullWidth>
                             <InputLabel id="queue-label">
-                                Departamentos
+                                Filas
                             </InputLabel>
                             <Select
                                 labelId="queue-label"
                                 id="queue-select"
                                 defaultValue={queueTicket}
-                                label="Departamentos"
+                                label="Filas"
                                 onChange={(e) => setQueues(e.target.value)}
                             >
                                 <MenuItem value={false}>
-                                    Todos os Departamentos
+                                    Todos os Filas
                                 </MenuItem>
                                 {user.queues.map((queue) => (
                                     <MenuItem key={queue.id} value={queue.id}>

@@ -1,36 +1,35 @@
-import React, { useState, useEffect } from "react";
 import {
-  makeStyles,
-  Paper,
-  Grid,
   FormControl,
+  Grid,
+  IconButton,
   InputLabel,
   MenuItem,
-  TextField,
+  Paper,
+  Select,
   Table,
-  TableHead,
   TableBody,
   TableCell,
+  TableHead,
   TableRow,
-  IconButton,
-  Select,
+  TextField,
+  makeStyles,
 } from "@material-ui/core";
-import { Formik, Form, Field } from "formik";
+import { Field, Form, Formik } from "formik";
+import React, { useEffect, useState } from "react";
 import ButtonWithSpinner from "../ButtonWithSpinner";
 import ConfirmationModal from "../ConfirmationModal";
 
 import { Edit as EditIcon } from "@material-ui/icons";
 
+import { has, head, isArray } from "lodash";
 import { toast } from "react-toastify";
 import useCompanies from "../../hooks/useCompanies";
-import usePlans from "../../hooks/usePlans";
-import ModalUsers from "../ModalUsers";
-import api from "../../services/api";
-import { head, isArray, has } from "lodash";
 import { useDate } from "../../hooks/useDate";
+import usePlans from "../../hooks/usePlans";
+import api from "../../services/api";
+import ModalUsers from "../ModalUsers";
 
 import moment from "moment";
-import { i18n } from "../../translate/i18n";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -77,12 +76,13 @@ export function CompanyForm(props) {
   const [firstUser, setFirstUser] = useState({});
 
   const [record, setRecord] = useState({
+	id: "",
     name: "",
     email: "",
     phone: "",
     planId: "",
     status: true,
-    campaignsEnabled: false,
+    //campaignsEnabled: false,
     dueDate: "",
     recurrence: "",
     ...initialValue,
@@ -203,7 +203,7 @@ export function CompanyForm(props) {
               <Grid xs={12} sm={6} md={4} item>
                 <Field
                   as={TextField}
-                  label={i18n.t("settings.company.form.name")}
+                  label="Nome"
                   name="name"
                   variant="outlined"
                   className={classes.fullWidth}
@@ -213,7 +213,7 @@ export function CompanyForm(props) {
               <Grid xs={12} sm={6} md={2} item>
                 <Field
                   as={TextField}
-                  label={i18n.t("settings.company.form.email")}
+                  label="E-mail"
                   name="email"
                   variant="outlined"
                   className={classes.fullWidth}
@@ -224,7 +224,7 @@ export function CompanyForm(props) {
               <Grid xs={12} sm={6} md={2} item>
                 <Field
                   as={TextField}
-                  label={i18n.t("settings.company.form.phone")}
+                  label="Telefone"
                   name="phone"
                   variant="outlined"
                   className={classes.fullWidth}
@@ -233,13 +233,11 @@ export function CompanyForm(props) {
               </Grid>
               <Grid xs={12} sm={6} md={2} item>
                 <FormControl margin="dense" variant="outlined" fullWidth>
-                  <InputLabel htmlFor="plan-selection">
-                    {i18n.t("settings.company.form.plan")}
-                  </InputLabel>
+                  <InputLabel htmlFor="plan-selection">Plano</InputLabel>
                   <Field
                     as={Select}
                     id="plan-selection"
-                    label={i18n.t("settings.company.form.plan")}
+                    label="Plano"
                     labelId="plan-selection-label"
                     name="planId"
                     margin="dense"
@@ -255,43 +253,41 @@ export function CompanyForm(props) {
               </Grid>
               <Grid xs={12} sm={6} md={2} item>
                 <FormControl margin="dense" variant="outlined" fullWidth>
-                  <InputLabel htmlFor="status-selection">
-                    {i18n.t("settings.company.form.status")}
-                  </InputLabel>
+                  <InputLabel htmlFor="status-selection">Status</InputLabel>
                   <Field
                     as={Select}
                     id="status-selection"
-                    label={i18n.t("settings.company.form.status")}
+                    label="Status"
                     labelId="status-selection-label"
                     name="status"
                     margin="dense"
                   >
-                    <MenuItem value={true}>{i18n.t("settings.company.form.yes")}</MenuItem>
-                    <MenuItem value={false}>{i18n.t("settings.company.form.no")}</MenuItem>
+                    <MenuItem value={true}>Sim</MenuItem>
+                    <MenuItem value={false}>Não</MenuItem>
                   </Field>
                 </FormControl>
               </Grid>
-              <Grid xs={12} sm={6} md={2} item>
+              {/*<Grid xs={12} sm={6} md={2} item>
                 <FormControl margin="dense" variant="outlined" fullWidth>
-                  <InputLabel htmlFor="status-selection">{i18n.t("settings.company.form.campanhas")}</InputLabel>
+                  <InputLabel htmlFor="status-selection">Campanhas</InputLabel>
                   <Field
                     as={Select}
                     id="campaigns-selection"
-                    label={i18n.t("settings.company.form.campanhas")}
+                    label="Campanhas"
                     labelId="campaigns-selection-label"
                     name="campaignsEnabled"
                     margin="dense"
                   >
-                    <MenuItem value={true}>{i18n.t("settings.company.form.enabled")}</MenuItem>
-                    <MenuItem value={false}>{i18n.t("settings.company.form.disabled")}</MenuItem>
+                    <MenuItem value={true}>Habilitadas</MenuItem>
+                    <MenuItem value={false}>Desabilitadas</MenuItem>
                   </Field>
                 </FormControl>
-              </Grid>
+              </Grid>*/}
               <Grid xs={12} sm={6} md={2} item>
                 <FormControl variant="outlined" fullWidth>
                   <Field
                     as={TextField}
-                    label={i18n.t("settings.company.form.dueDate")}
+                    label="Data de Vencimento"
                     type="date"
                     name="dueDate"
                     InputLabelProps={{
@@ -306,17 +302,17 @@ export function CompanyForm(props) {
               <Grid xs={12} sm={6} md={2} item>
                 <FormControl margin="dense" variant="outlined" fullWidth>
                   <InputLabel htmlFor="recorrencia-selection">
-                    {i18n.t("settings.company.form.recurrence")}
+                    Recorrência
                   </InputLabel>
                   <Field
                     as={Select}
-                    label={i18n.t("settings.company.form.recurrence")}
+                    label="Recorrência"
                     labelId="recorrencia-selection-label"
                     id="recurrence"
                     name="recurrence"
                     margin="dense"
                   >
-                    <MenuItem value="MENSAL">{i18n.t("settings.company.form.monthly")}</MenuItem>
+                    <MenuItem value="MENSAL">Mensal</MenuItem>
                     {/*<MenuItem value="BIMESTRAL">Bimestral</MenuItem>*/}
                     {/*<MenuItem value="TRIMESTRAL">Trimestral</MenuItem>*/}
                     {/*<MenuItem value="SEMESTRAL">Semestral</MenuItem>*/}
@@ -334,7 +330,7 @@ export function CompanyForm(props) {
                       onClick={() => onCancel()}
                       variant="contained"
                     >
-                      {i18n.t("settings.company.buttons.clear")}
+                      Limpar
                     </ButtonWithSpinner>
                   </Grid>
                   {record.id !== undefined ? (
@@ -348,7 +344,7 @@ export function CompanyForm(props) {
                           variant="contained"
                           color="secondary"
                         >
-                          {i18n.t("settings.company.buttons.delete")}
+                          Excluir
                         </ButtonWithSpinner>
                       </Grid>
                       <Grid xs={6} md={2} item>
@@ -360,7 +356,7 @@ export function CompanyForm(props) {
                           variant="contained"
                           color="primary"
                         >
-                          {i18n.t("settings.company.buttons.expire")}
+                          + Vencimento
                         </ButtonWithSpinner>
                       </Grid>
                       <Grid xs={6} md={1} item>
@@ -372,7 +368,7 @@ export function CompanyForm(props) {
                           variant="contained"
                           color="primary"
                         >
-                          {i18n.t("settings.company.buttons.user")}
+                          Usuário
                         </ButtonWithSpinner>
                       </Grid>
                     </>
@@ -386,7 +382,7 @@ export function CompanyForm(props) {
                       variant="contained"
                       color="primary"
                     >
-                      {i18n.t("settings.company.buttons.save")}
+                      Salvar
                     </ButtonWithSpinner>
                   </Grid>
                 </Grid>
@@ -412,7 +408,7 @@ export function CompaniesManagerGrid(props) {
     return row.planId !== null ? row.plan.name : "-";
   };
 
-  const renderCampaignsStatus = (row) => {
+  {/*const renderCampaignsStatus = (row) => {
     if (
       has(row, "settings") &&
       isArray(row.settings) &&
@@ -420,26 +416,26 @@ export function CompaniesManagerGrid(props) {
     ) {
       const setting = row.settings.find((s) => s.key === "campaignsEnabled");
       if (setting) {
-        return setting.value === "true" ? i18n.t("settings.company.form.enabled") : i18n.t("settings.company.form.disabled");
+        return setting.value === "true" ? "Habilitadas" : "Desabilitadas";
       }
     }
-    return i18n.t("settings.company.form.disabled")
-  };
+    return "Desabilitadas";
+  };*/}
 
   const rowStyle = (record) => {
     if (moment(record.dueDate).isValid()) {
       const now = moment();
       const dueDate = moment(record.dueDate);
       const diff = dueDate.diff(now, "days");
-      if (diff === 5) {
+      if (diff >= 1 && diff <= 5) {
         return { backgroundColor: "#fffead" };
       }
-      if (diff >= -3 && diff <= 4) {
-        return { backgroundColor: "#f7cc8f" };
-      }
-      if (diff === -4) {
+      if (diff <= 0) {
         return { backgroundColor: "#fa8c8c" };
       }
+      // else {
+      //   return { backgroundColor: "#affa8c" };
+      // }
     }
     return {};
   };
@@ -456,14 +452,15 @@ export function CompaniesManagerGrid(props) {
             <TableCell align="center" style={{ width: "1%" }}>
               #
             </TableCell>
-            <TableCell align="left">{i18n.t("settings.company.form.name")}</TableCell>
-            <TableCell align="left">{i18n.t("settings.company.form.email")}</TableCell>
-            <TableCell align="left">{i18n.t("settings.company.form.phone")}</TableCell>
-            <TableCell align="left">{i18n.t("settings.company.form.plan")}</TableCell>
-            <TableCell align="left">{i18n.t("settings.company.form.campanhas")}</TableCell>
-            <TableCell align="left">{i18n.t("settings.company.form.status")}</TableCell>
-            <TableCell align="left">{i18n.t("settings.company.form.createdAt")}</TableCell>
-            <TableCell align="left">{i18n.t("settings.company.form.expire")}</TableCell>
+			<TableCell align="left">ID</TableCell>
+            <TableCell align="left">Nome</TableCell>
+            <TableCell align="left">E-mail</TableCell>
+            <TableCell align="left">Telefone</TableCell>
+            <TableCell align="left">Plano</TableCell>
+            {/*<TableCell align="left">Campanhas</TableCell>*/}
+            <TableCell align="left">Status</TableCell>
+            <TableCell align="left">Criada Em</TableCell>
+            <TableCell align="left">Vencimento</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -474,11 +471,12 @@ export function CompaniesManagerGrid(props) {
                   <EditIcon />
                 </IconButton>
               </TableCell>
+			  <TableCell align="left">{row.id || "-"}</TableCell>
               <TableCell align="left">{row.name || "-"}</TableCell>
               <TableCell align="left">{row.email || "-"}</TableCell>
               <TableCell align="left">{row.phone || "-"}</TableCell>
               <TableCell align="left">{renderPlan(row)}</TableCell>
-              <TableCell align="left">{renderCampaignsStatus(row)}</TableCell>
+			{/*<TableCell align="left">{renderCampaignsStatus(row)}</TableCell>*/}
               <TableCell align="left">{renderStatus(row)}</TableCell>
               <TableCell align="left">{dateToClient(row.createdAt)}</TableCell>
               <TableCell align="left">
@@ -502,12 +500,13 @@ export default function CompaniesManager() {
   const [loading, setLoading] = useState(false);
   const [records, setRecords] = useState([]);
   const [record, setRecord] = useState({
+	id: "",  
     name: "",
     email: "",
     phone: "",
     planId: "",
     status: true,
-    campaignsEnabled: false,
+    //campaignsEnabled: false,
     dueDate: "",
     recurrence: "",
   });
@@ -523,7 +522,7 @@ export default function CompaniesManager() {
       const companyList = await list();
       setRecords(companyList);
     } catch (e) {
-      toast.error(i18n.t("settings.company.toasts.errorList"));
+      toast.error("Não foi possível carregar a lista de registros");
     }
     setLoading(false);
   };
@@ -531,18 +530,17 @@ export default function CompaniesManager() {
   const handleSubmit = async (data) => {
     setLoading(true);
     try {
-      if (data.id !== 0 && data.id !== undefined) {
+      if (data.id !== undefined) {
         await update(data);
       } else {
         await save(data);
       }
-
       await loadPlans();
       handleCancel();
-      toast.success(i18n.t("settings.company.toasts.success"));
+      toast.success("Operação realizada com sucesso!");
     } catch (e) {
       toast.error(
-        i18n.t("settings.company.toasts.error")
+        "Não foi possível realizar a operação. Verifique se já existe uma empresa com o mesmo nome ou se os campos foram preenchidos corretamente"
       );
     }
     setLoading(false);
@@ -554,9 +552,9 @@ export default function CompaniesManager() {
       await remove(record.id);
       await loadPlans();
       handleCancel();
-      toast.success(i18n.t("settings.company.toasts.success"));
+      toast.success("Operação realizada com sucesso!");
     } catch (e) {
-      toast.error(i18n.t("settings.company.toasts.errorOperation"));
+      toast.error("Não foi possível realizar a operação");
     }
     setLoading(false);
   };
@@ -568,28 +566,28 @@ export default function CompaniesManager() {
   const handleCancel = () => {
     setRecord((prev) => ({
       ...prev,
-      id: undefined,
+	  id: "",
       name: "",
       email: "",
       phone: "",
       planId: "",
       status: true,
-      campaignsEnabled: false,
+      //campaignsEnabled: false,
       dueDate: "",
       recurrence: "",
     }));
   };
 
   const handleSelect = (data) => {
-    let campaignsEnabled = false;
+//    let campaignsEnabled = false;
 
-    const setting = data.settings.find(
-      (s) => s.key.indexOf("campaignsEnabled") > -1
-    );
-    if (setting) {
-      campaignsEnabled =
-        setting.value === "true" || setting.value === "enabled";
-    }
+//    const setting = data.settings.find(
+//      (s) => s.key.indexOf("campaignsEnabled") > -1
+//    );
+//    if (setting) {
+//      campaignsEnabled =
+//       setting.value === "true" || setting.value === "enabled";
+//    }
 
     setRecord((prev) => ({
       ...prev,
@@ -599,7 +597,7 @@ export default function CompaniesManager() {
       email: data.email || "",
       planId: data.planId || "",
       status: data.status === false ? false : true,
-      campaignsEnabled,
+      //campaignsEnabled,
       dueDate: data.dueDate || "",
       recurrence: data.recurrence || "",
     }));
@@ -622,12 +620,12 @@ export default function CompaniesManager() {
         </Grid>
       </Grid>
       <ConfirmationModal
-        title={i18n.t("settings.company.confirmModal.title")}
+        title="Exclusão de Registro"
         open={showConfirmDialog}
         onClose={() => setShowConfirmDialog(false)}
         onConfirm={() => handleDelete()}
       >
-        {i18n.t("settings.company.confirmModal.message")}
+        Deseja realmente excluir esse registro?
       </ConfirmationModal>
     </Paper>
   );

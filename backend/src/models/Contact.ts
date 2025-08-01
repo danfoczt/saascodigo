@@ -18,6 +18,7 @@ import Ticket from "./Ticket";
 import Company from "./Company";
 import Schedule from "./Schedule";
 import Whatsapp from "./Whatsapp";
+import Group from "./Group";
 
 @Table
 class Contact extends Model<Contact> {
@@ -29,7 +30,7 @@ class Contact extends Model<Contact> {
   @Column
   name: string;
 
-  @AllowNull(false)
+  @AllowNull(true)
   @Unique
   @Column
   number: string;
@@ -47,10 +48,6 @@ class Contact extends Model<Contact> {
   @Column
   isGroup: boolean;
 
-  @Default(false)
-  @Column
-  disableBot: boolean;
-
   @CreatedAt
   createdAt: Date;
 
@@ -63,9 +60,17 @@ class Contact extends Model<Contact> {
   @HasMany(() => ContactCustomField)
   extraInfo: ContactCustomField[];
 
+  @Default(true)
+  @Column
+  active: boolean;
+
   @ForeignKey(() => Company)
   @Column
   companyId: number;
+
+  @Default(false)
+  @Column
+  disableBot: boolean
 
   @BelongsTo(() => Company)
   company: Company;
@@ -83,6 +88,19 @@ class Contact extends Model<Contact> {
 
   @BelongsTo(() => Whatsapp)
   whatsapp: Whatsapp;
+
+  @Column
+  messengerId: string;
+
+  @Column
+  instagramId: string;
+
+  @ForeignKey(() => Group)
+  @Column
+  groupId: number;
+
+  @BelongsTo(() => Group)
+  group: Group;
 }
 
 export default Contact;

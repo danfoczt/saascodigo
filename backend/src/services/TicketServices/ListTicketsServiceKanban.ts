@@ -82,12 +82,7 @@ const ListTicketsServiceKanban = async ({
   ];
 
   if (showAll === "true") {
-    whereCondition = {}; 
-  } else {
-    whereCondition = {
-      ...whereCondition,
-      queueId: { [Op.or]: [queueIds, null] }
-    };
+    whereCondition = { queueId: { [Op.or]: [queueIds, null] } };
   }
 
   whereCondition = {
@@ -210,6 +205,9 @@ const ListTicketsServiceKanban = async ({
     };
   }
 
+  const limit = 40;
+  const offset = limit * (+pageNumber - 1);
+
   whereCondition = {
     ...whereCondition,
     companyId
@@ -219,14 +217,17 @@ const ListTicketsServiceKanban = async ({
     where: whereCondition,
     include: includeCondition,
     distinct: true,
+    limit,
+    offset,
     order: [["updatedAt", "DESC"]],
     subQuery: false
   });
+  const hasMore = count > offset + tickets.length;
 
   return {
     tickets,
     count,
-    hasMore: false
+    hasMore
   };
 };
 

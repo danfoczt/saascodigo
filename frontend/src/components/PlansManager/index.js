@@ -80,6 +80,7 @@ export function PlanManagerForm(props) {
         useKanban: true,
         useOpenAi: true,
         useIntegrations: true,
+        useInternal: true
     });
 
     useEffect(() => {
@@ -147,7 +148,7 @@ export function PlanManagerForm(props) {
                         <Grid xs={12} sm={6} md={1} item>
                             <Field
                                 as={TextField}
-                                label={i18n.t("plans.form.queues")}
+                                label="Filas"
                                 name="queues"
                                 variant="outlined"
                                 className={classes.fullWidth}
@@ -160,7 +161,7 @@ export function PlanManagerForm(props) {
                         <Grid xs={12} sm={6} md={1} item>
                             <Field
                                 as={TextField}
-                                label={i18n.t("plans.form.value")}
+                                label="Valor"
                                 name="value"
                                 variant="outlined"
                                 className={classes.fullWidth}
@@ -208,11 +209,11 @@ export function PlanManagerForm(props) {
                         {/* CHAT INTERNO */}
                         <Grid xs={12} sm={8} md={2} item>
                             <FormControl margin="dense" variant="outlined" fullWidth>
-                                <InputLabel htmlFor="useInternalChat-selection">{i18n.t("plans.form.internalChat")}</InputLabel>
+                                <InputLabel htmlFor="useInternalChat-selection">Chat Interno</InputLabel>
                                 <Field
                                     as={Select}
                                     id="useInternalChat-selection"
-                                    label={i18n.t("plans.form.internalChat")}
+                                    label="Chat Interno"
                                     labelId="useInternalChat-selection-label"
                                     name="useInternalChat"
                                     margin="dense"
@@ -224,13 +225,13 @@ export function PlanManagerForm(props) {
                         </Grid>
 
                         {/* API Externa */}
-                        <Grid xs={12} sm={8} md={4} item>
+                        {/*<Grid xs={12} sm={8} md={4} item>
                             <FormControl margin="dense" variant="outlined" fullWidth>
-                                <InputLabel htmlFor="useExternalApi-selection">{i18n.t("plans.form.externalApi")}</InputLabel>
+                                <InputLabel htmlFor="useExternalApi-selection">API Externa</InputLabel>
                                 <Field
                                     as={Select}
                                     id="useExternalApi-selection"
-                                    label={i18n.t("plans.form.externalApi")}
+                                    label="API Externa"
                                     labelId="useExternalApi-selection-label"
                                     name="useExternalApi"
                                     margin="dense"
@@ -239,16 +240,16 @@ export function PlanManagerForm(props) {
                                     <MenuItem value={false}>{i18n.t("plans.form.disabled")}</MenuItem>
                                 </Field>
                             </FormControl>
-                        </Grid>
+                        </Grid>*/}
 
                         {/* KANBAN */}
                         <Grid xs={12} sm={8} md={2} item>
                             <FormControl margin="dense" variant="outlined" fullWidth>
-                                <InputLabel htmlFor="useKanban-selection">{i18n.t("plans.form.kanban")}</InputLabel>
+                                <InputLabel htmlFor="useKanban-selection">Kanban</InputLabel>
                                 <Field
                                     as={Select}
                                     id="useKanban-selection"
-                                    label={i18n.t("plans.form.kanban")}
+                                    label="Kanban"
                                     labelId="useKanban-selection-label"
                                     name="useKanban"
                                     margin="dense"
@@ -280,13 +281,11 @@ export function PlanManagerForm(props) {
                         {/* INTEGRACOES */}
                         <Grid xs={12} sm={8} md={2} item>
                             <FormControl margin="dense" variant="outlined" fullWidth>
-                                <InputLabel htmlFor="useIntegrations-selection">
-                                    {i18n.t("plans.form.integrations")}
-                                </InputLabel>
+                                <InputLabel htmlFor="useIntegrations-selection">Integrações</InputLabel>
                                 <Field
                                     as={Select}
                                     id="useIntegrations-selection"
-                                    label={i18n.t("plans.form.integrations")}
+                                    label="Integrações"
                                     labelId="useIntegrations-selection-label"
                                     name="useIntegrations"
                                     margin="dense"
@@ -296,6 +295,24 @@ export function PlanManagerForm(props) {
                                 </Field>
                             </FormControl>
                         </Grid>
+
+                        <Grid xs={12} sm={6} md={2} item>
+                            <FormControl margin="dense" variant="outlined" fullWidth>
+                                <InputLabel htmlFor="useInternal-selection">Uso Interno</InputLabel>
+                                <Field
+                                    as={Select}
+                                    id="useInternal-selection"
+                                    label="Uso Interno"
+                                    labelId="useInternal-selection-label"
+                                    name="useInternal"
+                                    margin="dense"
+                                >
+                                    <MenuItem value={false}>Sim</MenuItem>
+                                    <MenuItem value={true}>Não</MenuItem>
+                                </Field>
+                            </FormControl>
+                        </Grid>
+
                     </Grid>
                     <Grid spacing={2} justifyContent="flex-end" container>
 
@@ -355,6 +372,10 @@ export function PlansManagerGrid(props) {
         return row.useIntegrations === false ? `${i18n.t("plans.form.no")}` : `${i18n.t("plans.form.yes")}`;
     };
 
+    const renderInternal = (row) => {
+        return row.useInternal === false ? "Sim" : "Não";
+    };
+
     return (
         <Paper className={classes.tableContainer}>
             <Table
@@ -369,15 +390,16 @@ export function PlansManagerGrid(props) {
                         <TableCell align="left">{i18n.t("plans.form.name")}</TableCell>
                         <TableCell align="center">{i18n.t("plans.form.users")}</TableCell>
                         <TableCell align="center">{i18n.t("plans.form.connections")}</TableCell>
-                        <TableCell align="center">{i18n.t("plans.form.queues")}</TableCell>
-                        <TableCell align="center">{i18n.t("plans.form.value")}</TableCell>
+                        <TableCell align="center">Filas</TableCell>
+                        <TableCell align="center">Valor</TableCell>
                         <TableCell align="center">{i18n.t("plans.form.campaigns")}</TableCell>
                         <TableCell align="center">{i18n.t("plans.form.schedules")}</TableCell>
-                        <TableCell align="center">{i18n.t("plans.form.internalChat")}</TableCell>
-                        <TableCell align="center">{i18n.t("plans.form.externalApi")}</TableCell>
-                        <TableCell align="center">{i18n.t("plans.form.kanban")}</TableCell>
+                        <TableCell align="center">Chat Interno</TableCell>
+                        <TableCell align="center">API Externa</TableCell>
+                        <TableCell align="center">Kanban</TableCell>
                         <TableCell align="center">Open.Ai</TableCell>
-                        <TableCell align="center">{i18n.t("plans.form.integrations")}</TableCell>
+                        <TableCell align="center">Integrações</TableCell>
+						<TableCell align="center">Plano Interno</TableCell>
                     </TableRow>
                 </TableHead>
                 <TableBody>
@@ -400,6 +422,7 @@ export function PlansManagerGrid(props) {
                             <TableCell align="center">{renderKanban(row)}</TableCell>
                             <TableCell align="center">{renderOpenAi(row)}</TableCell>
                             <TableCell align="center">{renderIntegrations(row)}</TableCell>
+							<TableCell align="center">{renderInternal(row)}</TableCell>
                         </TableRow>
                     ))}
                 </TableBody>
@@ -428,6 +451,7 @@ export default function PlansManager() {
         useKanban: true,
         useOpenAi: true,
         useIntegrations: true,
+        useInternal: true
     })
 
     useEffect(() => {
@@ -444,7 +468,7 @@ export default function PlansManager() {
             const planList = await list()
             setRecords(planList)
         } catch (e) {
-            toast.error(i18n.t("plans.toasts.errorList"))
+            toast.error('Não foi possível carregar a lista de registros')
         }
         setLoading(false)
     }
@@ -460,9 +484,9 @@ export default function PlansManager() {
             }
             await loadPlans()
             handleCancel()
-            toast.success(i18n.t("plans.toasts.success"))
+            toast.success('Operação realizada com sucesso!')
         } catch (e) {
-            toast.error(i18n.t("plans.toasts.error"))
+            toast.error('Não foi possível realizar a operação. Verifique se já existe uma plano com o mesmo nome ou se os campos foram preenchidos corretamente')
         }
         setLoading(false)
     }
@@ -473,9 +497,9 @@ export default function PlansManager() {
             await remove(record.id)
             await loadPlans()
             handleCancel()
-            toast.success(i18n.t("plans.toasts.success"))
+            toast.success('Operação realizada com sucesso!')
         } catch (e) {
-            toast.error(i18n.t("plans.toasts.errorOperation"))
+            toast.error('Não foi possível realizar a operação')
         }
         setLoading(false)
     }
@@ -498,7 +522,8 @@ export default function PlansManager() {
             useExternalApi: true,
             useKanban: true,
             useOpenAi: true,
-            useIntegrations: true
+            useIntegrations: true,
+            useInternal: true
         })
     }
 
@@ -511,6 +536,7 @@ export default function PlansManager() {
         let useKanban = data.useKanban === false ? false : true
         let useOpenAi = data.useOpenAi === false ? false : true
         let useIntegrations = data.useIntegrations === false ? false : true
+        let useInternal= data.useInternal === true ? true : false
 
         setRecord({
             id: data.id,
@@ -525,7 +551,8 @@ export default function PlansManager() {
             useExternalApi,
             useKanban,
             useOpenAi,
-            useIntegrations
+            useIntegrations,
+            useInternal
         })
     }
 
@@ -549,12 +576,12 @@ export default function PlansManager() {
                 </Grid>
             </Grid>
             <ConfirmationModal
-                title={i18n.t("plans.confirm.title")}
+                title="Exclusão de Registro"
                 open={showConfirmDialog}
                 onClose={() => setShowConfirmDialog(false)}
                 onConfirm={() => handleDelete()}
             >
-                {i18n.t("plans.confirm.message")}
+                Deseja realmente excluir esse registro?
             </ConfirmationModal>
         </Paper>
     )
