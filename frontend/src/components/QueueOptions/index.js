@@ -1,21 +1,16 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { makeStyles } from "@material-ui/core/styles";
 import Stepper from "@material-ui/core/Stepper";
 import Step from "@material-ui/core/Step";
 import StepLabel from "@material-ui/core/StepLabel";
 import Typography from "@material-ui/core/Typography";
-import { Button, Grid, IconButton, StepContent, TextField } from "@material-ui/core";
+import { Button, IconButton, StepContent, TextField } from "@material-ui/core";
 import AddIcon from "@material-ui/icons/Add";
 import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
 import SaveIcon from "@material-ui/icons/Save";
 import EditIcon from "@material-ui/icons/Edit";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
-import { AttachFile, DeleteOutline } from "@material-ui/icons";
-import { head } from "lodash";
-import {toast} from "react-toastify";
-import {i18n} from "../../translate/i18n";
-import ConfirmationModal from "../ConfirmationModal";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -41,11 +36,6 @@ const useStyles = makeStyles((theme) => ({
 export function QueueOptionStepper({ queueId, options, updateOptions }) {
   const classes = useStyles();
   const [activeOption, setActiveOption] = useState(-1);
-  const [attachment, setAttachment] = useState(null);
-  const attachmentFile = useRef(null);
-  const [confirmationOpen, setConfirmationOpen] = useState(false);
-  
-  const [queue, setQueue] = useState(false);
 
   const handleOption = (index) => async () => {
     setActiveOption(index);
@@ -81,22 +71,12 @@ export function QueueOptionStepper({ queueId, options, updateOptions }) {
           method: "PUT",
           data: option,
         });
-		if (attachment != null) {
-          const formData = new FormData();
-          formData.append("file", attachment);
-          await api.post(`/queue-options/${option.id}/media-upload`, formData);
-        }
       } else {
         const { data } = await api.request({
           url: `/queue-options`,
           method: "POST",
           data: option,
         });
-		if (attachment != null) {
-          const formData = new FormData();
-          formData.append("file", attachment);
-          await api.post(`/queue-options/${option.id}/media-upload`, formData);
-        }
         option.id = data.id;
       }
       option.edition = false;
@@ -131,13 +111,6 @@ export function QueueOptionStepper({ queueId, options, updateOptions }) {
     updateOptions();
   };
 
-  const handleAttachmentFile = (e) => {
-    const file = head(e.target.files);
-    if (file) {
-      setAttachment(file);
-    }
-  };
-
   const handleOptionChangeTitle = (event, index) => {
     options[index].title = event.target.value;
     updateOptions();
@@ -148,34 +121,11 @@ export function QueueOptionStepper({ queueId, options, updateOptions }) {
     updateOptions();
   };
 
-  const deleteMedia = async (option) => {
-    if (attachment) {
-      setAttachment(null);
-      attachmentFile.current.value = null;
-    }
-  
-    if (option.mediaPath) {
-      await api.delete(`/queue-options/${option.id}/media-upload`);
-      setQueue((prev) => ({ ...prev, mediaPath: null, mediaName: null }));
-      toast.success(i18n.t("queueModal.toasts.deleted"));
-      option.edition = false; //FECHA O CAMPO DE EDITAR
-    }  
-    updateOptions();
-  };
-
   const renderTitle = (index) => {
     const option = options[index];
     if (option.edition) {
       return (
         <>
-    <ConfirmationModal
-      title={i18n.t("queueModal.confirmationModal.deleteTitle")}
-      open={confirmationOpen}
-      onClose={() => setConfirmationOpen(false)}
-      onConfirm={() => deleteMedia(option)}
-    >
-      {i18n.t("queueModal.confirmationModal.deleteMessage")}
-    </ConfirmationModal>
           <TextField
             value={option.title}
             onChange={(event) => handleOptionChangeTitle(event, index)}
@@ -183,13 +133,6 @@ export function QueueOptionStepper({ queueId, options, updateOptions }) {
             className={classes.input}
             placeholder="Título da opção"
           />
-                    <div style={{ display: "none" }}>
-            <input
-              type="file"
-              ref={attachmentFile}
-              onChange={(e) => handleAttachmentFile(e)}
-            />
-          </div>
           {option.edition && (
             <>
               <IconButton
@@ -210,33 +153,6 @@ export function QueueOptionStepper({ queueId, options, updateOptions }) {
               >
                 <DeleteOutlineIcon />
               </IconButton>
-              {!attachment && !option.mediaPath && (
-                <IconButton
-                  variant="outlined"
-                  color="primary"
-                  size="small"
-                  className={classes.button}
-                    onClick={() => attachmentFile.current.click()}
-                  >
-                  <AttachFile/>
-                </IconButton>
-              )}
-                             {(option.mediaPath || attachment) && (
-                    <Grid xs={12} item>
-                      <Button startIcon={<AttachFile />}>
-                        {attachment != null
-                          ? attachment.name
-                          : option.mediaName}
-                      </Button>
-                      
-                        <IconButton
-                          onClick={() => setConfirmationOpen(true)}
-                          color="secondary"
-                        >
-                          <DeleteOutline />
-                        </IconButton>
-                    </Grid>
-                  )}
             </>
           )}
         </>

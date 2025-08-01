@@ -1,23 +1,24 @@
-import React, { useContext, useEffect, useState } from "react";
-import { useHistory, useParams } from "react-router-dom";
+import React, { useState, useEffect, useContext } from "react";
+import { useParams, useHistory } from "react-router-dom";
 
-import clsx from "clsx";
 import { toast } from "react-toastify";
+import clsx from "clsx";
 
 import { Paper, makeStyles } from "@material-ui/core";
 
-import { AuthContext } from "../../context/Auth/AuthContext";
-import { ReplyMessageProvider } from "../../context/ReplyingMessage/ReplyingMessageContext";
-import { SocketContext } from "../../context/Socket/SocketContext";
-import toastError from "../../errors/toastError";
-import api from "../../services/api";
 import ContactDrawer from "../ContactDrawer";
 import MessageInput from "../MessageInputCustom/";
-import MessagesList from "../MessagesList";
-import { TagsContainer } from "../TagsContainer";
-import TicketActionButtons from "../TicketActionButtonsCustom";
 import TicketHeader from "../TicketHeader";
 import TicketInfo from "../TicketInfo";
+import TicketActionButtons from "../TicketActionButtonsCustom";
+import MessagesList from "../MessagesList";
+import api from "../../services/api";
+import { ReplyMessageProvider } from "../../context/ReplyingMessage/ReplyingMessageContext";
+import toastError from "../../errors/toastError";
+import { AuthContext } from "../../context/Auth/AuthContext";
+import { TagsContainer } from "../TagsContainer";
+import { SocketContext } from "../../context/Socket/SocketContext";
+import { i18n } from "../../translate/i18n";
 
 const drawerWidth = 320;
 
@@ -81,7 +82,7 @@ const Ticket = () => {
 
           const queueAllowed = queues.find((q) => q.id === queueId);
           if (queueAllowed === undefined && profile !== "admin") {
-            toast.error("Acesso não permitido");
+            toast.error(i18n.t("tickets.toasts.unauthorized"));
             history.push("/tickets");
             return;
           }

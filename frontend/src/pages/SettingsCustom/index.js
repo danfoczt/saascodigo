@@ -11,8 +11,6 @@ import CompaniesManager from "../../components/CompaniesManager";
 import PlansManager from "../../components/PlansManager";
 import HelpsManager from "../../components/HelpsManager";
 import Options from "../../components/Settings/Options";
-import Uploader from "../../components/Settings/Uploader";
-import NewCompaniesManager from "../../pages/Companies";
 
 import { i18n } from "../../translate/i18n.js";
 import { toast } from "react-toastify";
@@ -71,22 +69,6 @@ const SettingsCustom = () => {
   const { find, updateSchedules } = useCompanies();
   const { getAll: getAllSettings } = useSettings();
 
-  // MODIFICAÇÃO: Ler o localStorage para restaurar a aba "Logo" após o reload do upload
-  useEffect(() => {
-    const activeTab = localStorage.getItem('activeTab');
-    const uploadTimestamp = localStorage.getItem('uploadTimestamp');
-    const currentTime = Date.now();
-    const timeThreshold = 5000; // 5 segundos
-
-    if (activeTab === 'logo' && uploadTimestamp && (currentTime - parseInt(uploadTimestamp) < timeThreshold)) {
-      setTab('uploader'); // Define a aba "Logo" (uploader) como ativa após o reload do upload
-    }
-
-    // Limpar o localStorage para evitar que a aba "Logo" seja selecionada em novas navegações
-    localStorage.removeItem('activeTab');
-    localStorage.removeItem('uploadTimestamp');
-  }, []);
-
   useEffect(() => {
     async function findData() {
       setLoading(true);
@@ -119,36 +101,35 @@ const SettingsCustom = () => {
   }, []);
 
   const handleTabChange = (event, newValue) => {
-    async function findData() {
-      setLoading(true);
-      try {
-        const companyId = localStorage.getItem("companyId");
-        const company = await find(companyId);
-        const settingList = await getAllSettings();
-        setCompany(company);
-        setSchedules(company.schedules);
-        setSettings(settingList);
-
-        if (Array.isArray(settingList)) {
-          const scheduleType = settingList.find(
-            (d) => d.key === "scheduleType"
-          );
-          if (scheduleType) {
-            setSchedulesEnabled(scheduleType.value === "company");
+      async function findData() {
+        setLoading(true);
+        try {
+          const companyId = localStorage.getItem("companyId");
+          const company = await find(companyId);
+          const settingList = await getAllSettings();
+          setCompany(company);
+          setSchedules(company.schedules);
+          setSettings(settingList);
+  
+          if (Array.isArray(settingList)) {
+            const scheduleType = settingList.find(
+              (d) => d.key === "scheduleType"
+            );
+            if (scheduleType) {
+              setSchedulesEnabled(scheduleType.value === "company");
+            }
           }
+  
+          const user = await getCurrentUserInfo();
+          setCurrentUser(user);
+        } catch (e) {
+          toast.error(e);
         }
-
-        const user = await getCurrentUserInfo();
-        setCurrentUser(user);
-      } catch (e) {
-        toast.error(e);
+        setLoading(false);
       }
-      setLoading(false);
-    }
-    findData();
-    // MODIFICAÇÃO: Limpar o localStorage quando o usuário muda de aba manualmente
-    localStorage.removeItem('activeTab');
-    localStorage.removeItem('uploadTimestamp');
+      findData();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+
     setTab(newValue);
   };
 
@@ -157,7 +138,7 @@ const SettingsCustom = () => {
     try {
       setSchedules(data);
       await updateSchedules({ id: company.id, schedules: data });
-      toast.success("Horários atualizados com sucesso.");
+      toast.success(i18n.t("settings.schedulesUpdated"));
     } catch (e) {
       toast.error(e);
     }
@@ -183,13 +164,11 @@ const SettingsCustom = () => {
           onChange={handleTabChange}
           className={classes.tab}
         >
-          <Tab label="Opções" value={"options"} />
-          {schedulesEnabled && <Tab label="Horários" value={"schedules"} />}
-          {isSuper() ? <Tab label="Logo" value={"uploader"} /> : null}
-          {isSuper() ? <Tab label="Empresas" value={"companies"} /> : null}
-          {isSuper() ? <Tab label="Cadastrar Empresa" value={"newcompanie"} /> : null}
-          {isSuper() ? <Tab label="Planos" value={"plans"} /> : null}
-          {isSuper() ? <Tab label="Ajuda" value={"helps"} /> : null}
+          <Tab label={i18n.t("settings.tabs.options")} value={"options"} />
+          {schedulesEnabled && <Tab label={i18n.t("settings.tabs.schedules")} value={"schedules"} />}
+          {isSuper() ? <Tab label={i18n.t("settings.tabs.companies")} value={"companies"} /> : null}
+          {isSuper() ? <Tab label={i18n.t("settings.tabs.plans")} value={"plans"} /> : null}
+          {isSuper() ? <Tab label={i18n.t("settings.tabs.helps")} value={"helps"} /> : null}
         </Tabs>
         <Paper className={classes.paper} elevation={0}>
           <TabPanel
@@ -221,18 +200,6 @@ const SettingsCustom = () => {
               <TabPanel
                 className={classes.container}
                 value={tab}
-                name={"newcompanie"}
-              >
-                <NewCompaniesManager />
-              </TabPanel>
-            )}
-          />
-          <OnlyForSuperUser
-            user={currentUser}
-            yes={() => (
-              <TabPanel
-                className={classes.container}
-                value={tab}
                 name={"plans"}
               >
                 <PlansManager />
@@ -248,18 +215,6 @@ const SettingsCustom = () => {
                 name={"helps"}
               >
                 <HelpsManager />
-              </TabPanel>
-            )}
-          />
-          <OnlyForSuperUser
-            user={currentUser}
-            yes={() => (
-              <TabPanel
-                className={classes.container}
-                value={tab}
-                name={"uploader"}
-              >
-                <Uploader />
               </TabPanel>
             )}
           />

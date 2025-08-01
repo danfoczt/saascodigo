@@ -16,7 +16,7 @@ const ShowTicketService = async (
       {
         model: Contact,
         as: "contact",
-        attributes: ["id", "name", "number", "email", "profilePicUrl","messengerId", "instagramId"],
+        attributes: ["id", "name", "number", "email", "profilePicUrl"],
         include: ["extraInfo"]
       },
       {
@@ -33,7 +33,7 @@ const ShowTicketService = async (
       {
         model: Whatsapp,
         as: "whatsapp",
-        attributes: ["name","type","wavoip"]
+        attributes: ["name"]
       },
       {
         model: Tag,
@@ -50,8 +50,6 @@ const ShowTicketService = async (
   if (!ticket) {
     throw new AppError("ERR_NO_TICKET_FOUND", 404);
   }
-
-  console.log("Dados brutos do WhatsApp:", ticket.whatsapp?.toJSON());
 
   return ticket;
 };

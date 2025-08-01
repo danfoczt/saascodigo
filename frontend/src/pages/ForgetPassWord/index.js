@@ -20,12 +20,12 @@ import Container from "@material-ui/core/Container";
 import api from "../../services/api";
 import { i18n } from "../../translate/i18n";
 import moment from "moment";
+import logo from "../../assets/logo.png";
 import { toast } from 'react-toastify'; 
 import toastError from '../../errors/toastError';
 import 'react-toastify/dist/ReactToastify.css';
 import { BrowserRouter as Router, Route, Switch } from "react-router-dom";
 
-const logo = `${process.env.REACT_APP_BACKEND_URL}/public/logotipos/login.png`;
 const useStyles = makeStyles((theme) => ({
   root: {
     width: "100vw",
@@ -103,24 +103,24 @@ const ForgetPassword = () => {
   const [user] = useState(initialState);
   const dueDate = moment().add(3, "day").format();
 
-  const handleSendEmail = async (values) => {
-    const email = values.email;
-    try {
-      const response = await api.post(
-        `${process.env.REACT_APP_BACKEND_URL}/forgetpassword/${email}`
-      );
-      console.log("API Response:", response.data);
+const handleSendEmail = async (values) => {
+  const email = values.email;
+  try {
+    const response = await api.post(
+      `${process.env.REACT_APP_BACKEND_URL}/forgetpassword/${email}`
+    );
+    console.log("API Response:", response.data);
 
-      if (response.data.status === 404) {
-        toast.error("Email não encontrado");
-      } else {
-        toast.success(i18n.t("Email enviado com sucesso!"));
-      }
-    } catch (err) {
-      console.log("API Error:", err);
-      toastError(err);
+    if (response.data.status === 404) {
+      toast.error(i18n.t("resetPassword.toasts.emailNotFound"));
+    } else {
+      toast.success(i18n.t("resetPassword.toasts.emailSent"));
     }
-  };
+  } catch (err) {
+    console.log("API Error:", err);
+    toastError(err);
+  }
+};
 
   const handleResetPassword = async (values) => {
     const email = values.email;
@@ -130,40 +130,35 @@ const ForgetPassword = () => {
 
     if (newPassword === confirmPassword) {
       try {
-        await api.post(`${process.env.REACT_APP_BACKEND_URL}/resetpasswords`, {
-          email,
-          token,
-          password: newPassword
-        });
+        await api.post(
+          `${process.env.REACT_APP_BACKEND_URL}/resetpasswords/${email}/${token}/${newPassword}`
+        );
         setError(""); // Limpe o erro se não houver erro
-        toast.success(i18n.t("Senha redefinida com sucesso."));
+        toast.success(i18n.t("resetPassword.toasts.passwordUpdated"));
         history.push("/login");
       } catch (err) {
         console.log(err);
-        toastError(err);
       }
-    } else {
-      setError("As senhas não correspondem");
     }
   };
 
   const isResetPasswordButtonClicked = showResetPasswordButton;
   const UserSchema = Yup.object().shape({
-    email: Yup.string().email("Invalid email").required("Required"),
+    email: Yup.string().email(i18n.t("resetPassword.formErrors.email.invalid")).required(i18n.t("resetPassword.formErrors.email.required")),
     newPassword: isResetPasswordButtonClicked
       ? Yup.string()
-          .required("Campo obrigatório")
+          .required(i18n.t("resetPassword.formErrors.newPassword.required"))
           .matches(
             passwordRegex,
-            "Sua senha precisa ter no mínimo 8 caracteres, sendo uma letra maiúscula, uma minúscula e um número."
+            i18n.t("resetPassword.formErrors.newPassword.matches")
           )
-      : Yup.string(),
+      : Yup.string(), // Sem validação se não for redefinição de senha
     confirmPassword: Yup.string().when("newPassword", {
       is: (newPassword) => isResetPasswordButtonClicked && newPassword,
       then: Yup.string()
-        .oneOf([Yup.ref("newPassword"), null], "As senhas não correspondem")
-        .required("Campo obrigatório"),
-      otherwise: Yup.string(),
+        .oneOf([Yup.ref("newPassword"), null], i18n.t("resetPassword.formErrors.confirmPassword.matches"))
+        .required(i18n.t("resetPassword.formErrors.confirmPassword.required")),
+      otherwise: Yup.string(), // Sem validação se não for redefinição de senha
     }),
   });
 
@@ -180,7 +175,7 @@ const ForgetPassword = () => {
             />
           </div>
           <Typography component="h1" variant="h5">
-            {i18n.t("Redefinir senha")}
+            {i18n.t("resetPassword.title")}
           </Typography>
           <Formik
             initialValues={{
@@ -212,7 +207,7 @@ const ForgetPassword = () => {
                       variant="outlined"
                       fullWidth
                       id="email"
-                      label={i18n.t("signup.form.email")}
+                      label={i18n.t("resetPassword.form.email")}
                       name="email"
                       error={touched.email && Boolean(errors.email)}
                       helperText={touched.email && errors.email}
@@ -228,7 +223,7 @@ const ForgetPassword = () => {
                           variant="outlined"
                           fullWidth
                           id="token"
-                          label="Código de Verificação"
+                          label={i18n.t("resetPassword.form.verificationCode")}
                           name="token"
                           error={touched.token && Boolean(errors.token)}
                           helperText={touched.token && errors.token}
@@ -243,7 +238,7 @@ const ForgetPassword = () => {
                           fullWidth
                           type={showPassword ? "text" : "password"}
                           id="newPassword"
-                          label="Nova senha"
+                          label={i18n.t("resetPassword.form.newPassword")}
                           name="newPassword"
                           error={
                             touched.newPassword &&
@@ -278,7 +273,7 @@ const ForgetPassword = () => {
                           fullWidth
                           type={showConfirmPassword ? "text" : "password"}
                           id="confirmPassword"
-                          label="Confirme a senha"
+                          label={i18n.t("resetPassword.form.confirmPassword")}
                           name="confirmPassword"
                           error={
                             touched.confirmPassword &&
@@ -318,7 +313,7 @@ const ForgetPassword = () => {
                     color="primary"
                     className={classes.submit}
                   >
-                    Redefinir Senha
+                    {i18n.t("resetPassword.buttons.submitPassword")}
                   </Button>
                 ) : (
                   <Button
@@ -328,7 +323,7 @@ const ForgetPassword = () => {
                     color="primary"
                     className={classes.submit}
                   >
-                    Enviar Email
+{                    i18n.t("resetPassword.buttons.submitEmail")}
                   </Button>
                 )}
                 <Grid container justifyContent="flex-end">
@@ -339,7 +334,7 @@ const ForgetPassword = () => {
                       component={RouterLink}
                       to="/signup"
                     >
-                      {i18n.t("Não tem uma conta? Cadastre-se!")}
+                      {i18n.t("resetPassword.buttons.back")}
                     </Link>
                   </Grid>
                 </Grid>

@@ -1,6 +1,6 @@
 import { createContext } from "react";
 import openSocket from "socket.io-client";
-import { isExpired, decodeToken } from "react-jwt";
+import jwt from "jsonwebtoken";
 
 class ManagedSocket {
   constructor(socketManager) {
@@ -10,7 +10,7 @@ class ManagedSocket {
     this.joins = [];
 
     this.rawSocket.on("connect", () => {
-      if (this.rawSocket.io.opts.query?.r && !this.rawSocket.recovered) {
+      if (!this.rawSocket.recovered) {
         const refreshJoinsOnReady = () => {
           for (const j of this.joins) {
             console.debug("refreshing join", j);
@@ -95,16 +95,12 @@ const SocketManager = {
         this.currentSocket.removeAllListeners();
         this.currentSocket.disconnect();
         this.currentSocket = null;
-        this.currentCompanyId = null;
-		    this.currentUserId = null;
       }
 
       let token = JSON.parse(localStorage.getItem("token"));
-      if (!token) {
-        return new DummySocket();
-      }
-      
-      if ( isExpired(token) ) {
+      const { exp } = jwt.decode(token) ?? {};
+
+      if ( Date.now() >= exp*1000) {
         console.warn("Expired token, reload after refresh");
         setTimeout(() => {
           window.location.reload();
@@ -115,39 +111,29 @@ const SocketManager = {
       this.currentCompanyId = companyId;
       this.currentUserId = userId;
       
+      if (!token) {
+        return new DummySocket();
+      }
+      
       this.currentSocket = openSocket(process.env.REACT_APP_BACKEND_URL, {
         transports: ["websocket"],
         pingTimeout: 18000,
         pingInterval: 18000,
         query: { token },
       });
-
-      this.currentSocket.io.on("reconnect_attempt", () => {
-        this.currentSocket.io.opts.query.r = 1;
-        token = JSON.parse(localStorage.getItem("token"));
-        if ( isExpired(token) ) {
-          console.warn("Refreshing");
-          window.location.reload();
-        } else {
-          console.warn("Using new token");
-          this.currentSocket.io.opts.query.token = token;
-        }
-      });
       
       this.currentSocket.on("disconnect", (reason) => {
         console.warn(`socket disconnected because: ${reason}`);
-        if (reason.startsWith("io server disconnect")) {
+        if (reason.startsWith("io ")) {
           console.warn("tryng to reconnect", this.currentSocket);
-          token = JSON.parse(localStorage.getItem("token"));
           
-          if ( isExpired(token) ) {
-            console.warn("Expired token - refreshing");
+          const { exp } = jwt.decode(token);
+          if ( Date.now()-180 >= exp*1000) {
+            console.warn("Expired token, reloading app");
             window.location.reload();
             return;
           }
-          console.warn("Reconnecting using refreshed token");
-          this.currentSocket.io.opts.query.token = token;
-          this.currentSocket.io.opts.query.r = 1;
+
           this.currentSocket.connect();
         }        
       });
@@ -179,8 +165,6 @@ const SocketManager = {
       callbackReady();
     });
   },
-  
-  onConnect: function( callbackReady ) { this.onReady( callbackReady ) },
 
 };
 

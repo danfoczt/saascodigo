@@ -23,10 +23,6 @@ import { Tooltip } from "@material-ui/core";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import toastError from "../../errors/toastError";
 
-import FacebookIcon from "@material-ui/icons/Facebook";
-import InstagramIcon from "@material-ui/icons/Instagram";
-import WhatsAppIcon from "@material-ui/icons/WhatsApp";
-
 const useStyles = makeStyles((theme) => ({
   ticket: {
     position: "relative",
@@ -135,7 +131,7 @@ const TicketListItem = ({ ticket }) => {
     }
     history.push(`/tickets/${ticket.uuid}`);
   };
-  console.log("🚀 Console Log TICKET LIST ITEM: ticket.lastMessage", ticket.lastMessage);
+  console.log("🚀 Console Log : ticket.lastMessage", ticket.lastMessage);
 
   const handleSelectTicket = (ticket) => {
     history.push(`/tickets/${ticket.uuid}`);
@@ -187,33 +183,48 @@ const TicketListItem = ({ ticket }) => {
                   color="primary"
                 />
               )}
-
-              {ticket.whatsappId && (
-                <div className={classes.userTag} title={i18n.t("ticketsList.connectionTitle")}>{ticket.whatsapp?.name}</div>
-              )}
-              
-              {/*{ticket.contact.messengerId && (
-                <FacebookIcon />
-              )}
-              {ticket.contact.instagramId && (
-                <InstagramIcon />
-              )}
-              {ticket.contact.number && (
-                <WhatsAppIcon />
-              )}*/}
-              
+{/*               {ticket.lastMessage && (
+                <Typography
+                  className={classes.lastMessageTime}
+                  component="span"
+                  variant="body2"
+                  color="textSecondary"
+                >
+                  {isSameDay(parseISO(ticket.updatedAt), new Date()) ? (
+                    <>{format(parseISO(ticket.updatedAt), "HH:mm")}</>
+                  ) : (
+                    <>{format(parseISO(ticket.updatedAt), "dd/MM/yyyy")}</>
+                  )}
+                </Typography>
+              )} */}
             </span>
           }
+/*           secondary={
+            <span className={classes.contactNameWrapper}>
+              <Typography
+                className={classes.contactLastMessage}
+                noWrap
+                component="span"
+                variant="body2"
+                color="textSecondary"
+              >
+                {ticket.lastMessage ? (
+                  <MarkdownWrapper>{ticket.lastMessage}</MarkdownWrapper>
+                ) : (
+                  <MarkdownWrapper></MarkdownWrapper>
+                )}
+              </Typography>
+
+              <Badge
+                className={classes.newMessagesCount}
+                badgeContent={ticket.unreadMessages}
+                classes={{
+                  badge: classes.badgeStyle,
+                }}
+              />
+            </span>
+          } */
         />
-        {ticket.lastMessage ? (
-          ticket.lastMessage.includes("VCARD") ? (
-          <Typography>Novo contato recebido...</Typography>
-            ) : (
-              <MarkdownWrapper>{ticket.lastMessage}</MarkdownWrapper>
-            )
-          ) : (
-            <br />
-      )}
         {ticket.status === "pending" && (
           <ButtonWithSpinner
             color="primary"

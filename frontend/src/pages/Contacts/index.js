@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useReducer, useContext, useRef } from "react";
+import React, { useState, useEffect, useReducer, useContext } from "react";
 
 import { toast } from "react-toastify";
 import { useHistory } from "react-router-dom";
 import { Tooltip } from "@material-ui/core";
 import { makeStyles } from "@material-ui/core/styles";
-import Checkbox from '@material-ui/core/Checkbox';
 import Table from "@material-ui/core/Table";
 import TableBody from "@material-ui/core/TableBody";
 import TableCell from "@material-ui/core/TableCell";
@@ -13,11 +12,11 @@ import TableRow from "@material-ui/core/TableRow";
 import Paper from "@material-ui/core/Paper";
 import Button from "@material-ui/core/Button";
 import Avatar from "@material-ui/core/Avatar";
-/*import WhatsAppIcon from "@material-ui/icons/WhatsApp";*/
+import WhatsAppIcon from "@material-ui/icons/WhatsApp";
 import SearchIcon from "@material-ui/icons/Search";
 import TextField from "@material-ui/core/TextField";
 import InputAdornment from "@material-ui/core/InputAdornment";
-import CheckCircleIcon from "@material-ui/icons/CheckCircle";
+
 import IconButton from "@material-ui/core/IconButton";
 import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
 import EditIcon from "@material-ui/icons/Edit";
@@ -25,7 +24,7 @@ import api from "../../services/api";
 import TableRowSkeleton from "../../components/TableRowSkeleton";
 import ContactModal from "../../components/ContactModal";
 import ConfirmationModal from "../../components/ConfirmationModal/";
-import CancelIcon from "@material-ui/icons/Cancel";
+
 import { i18n } from "../../translate/i18n";
 import MainHeader from "../../components/MainHeader";
 import Title from "../../components/Title";
@@ -36,25 +35,9 @@ import { AuthContext } from "../../context/Auth/AuthContext";
 import { Can } from "../../components/Can";
 import NewTicketModal from "../../components/NewTicketModal";
 import { SocketContext } from "../../context/Socket/SocketContext";
-import { generateColor } from "../../helpers/colorGenerator";
-import { getInitials } from "../../helpers/getInitials";
+
 import {CSVLink} from "react-csv";
-
-
-
-import PopupState, { bindTrigger, bindMenu } from "material-ui-popup-state";
-import {
-    ArrowDropDown,
-    Backup,
-    CloudDownload,
-    ContactPhone,
-} from "@material-ui/icons";
-import { Menu, MenuItem } from "@material-ui/core";
-
-/* ícones da Meta */
-import FacebookIcon from "@material-ui/icons/Facebook";
-import InstagramIcon from "@material-ui/icons/Instagram";
-import WhatsAppIcon from "@material-ui/icons/WhatsApp";
+import ImportContactsModal from "../../components/ImportContactsModal";
 
 const reducer = (state, action) => {
   if (action.type === "LOAD_CONTACTS") {
@@ -126,33 +109,7 @@ const Contacts = () => {
   const [deletingContact, setDeletingContact] = useState(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [hasMore, setHasMore] = useState(false);
-  const [selectAll, setSelectAll] = useState(false); // Estado para controlar se todos os checkboxes estão marcados
-  const [selectedContacts, setSelectedContacts] = useState([]);
-  const fileUploadRef = useRef(null);
-
-  
-  useEffect(() => {
-    if (selectAll) {
-        setSelectedContacts(contacts.map((contact) => contact.id));
-    } else {
-        setSelectedContacts([]);
-    }
-}, [contacts, selectAll]);
-
-const handleSelectAll = () => {
-    setSelectAll(!selectAll); // Alterna o estado de selectAll
-};
-
-
-const handleCheckboxChange = (contactId) => {
-  setSelectedContacts((prevSelected) => {
-      if (prevSelected.includes(contactId)) {
-          return prevSelected.filter((id) => id !== contactId);
-      } else {
-          return [...prevSelected, contactId];
-      }
-  });
-};
+  const [openModalImport, setOpenModalImport] = useState(false);
 
   const socketManager = useContext(SocketContext);
 
@@ -214,48 +171,21 @@ const handleCheckboxChange = (contactId) => {
     setContactModalOpen(false);
   };
 
-  /*const handleSaveTicket = async (contactId) => {
-    if (!contactId) return;
-    const { data } = await api.get(`/contacts/${contactId}`);
-    setLoading(true);
-    if(data.number){
-      try {
-        const { data: ticket } = await api.post("/tickets", {
-          contactId: contactId,
-          userId: user?.id,
-          status: "open",
-        });
-        history.push(`/tickets/${ticket.id}`);
-      } catch (err) {
-        toastError(err);
-      }
-    } else if(!data.number && data.instagramId && !data.messengerId){
-      try {
-        const { data: ticket } = await api.post("/hub-ticket", {
-          contactId: contactId,
-          userId: user?.id,
-          status: "open",
-          channel: "instagram"
-        });
-        history.push(`/tickets/${ticket.id}`);
-      } catch (err) {
-        toastError(err);
-      }
-    } else if(!data.number && data.messengerId && !data.instagramId){
-      try {
-        const { data: ticket } = await api.post("/hub-ticket", {
-          contactId: contactId,
-          userId: user?.id,
-          status: "open",
-          channel: "facebook"
-        });
-        history.push(`/tickets/${ticket.id}`);
-      } catch (err) {
-        toastError(err);
-      }
-    }
-    setLoading(false);
-  };*/
+  // const handleSaveTicket = async contactId => {
+  // 	if (!contactId) return;
+  // 	setLoading(true);
+  // 	try {
+  // 		const { data: ticket } = await api.post("/tickets", {
+  // 			contactId: contactId,
+  // 			userId: user?.id,
+  // 			status: "open",
+  // 		});
+  // 		history.push(`/tickets/${ticket.id}`);
+  // 	} catch (err) {
+  // 		toastError(err);
+  // 	}
+  // 	setLoading(false);
+  // };
 
   const handleCloseOrOpenTicket = (ticket) => {
     setNewTicketModalOpen(false);
@@ -281,62 +211,18 @@ const handleCheckboxChange = (contactId) => {
     setPageNumber(1);
   };
 
-  
-  const handleDeleteSelectedContacts = async () => {
-    try {
-        for (const contactId of selectedContacts) {
-            await api.delete(`/contacts/${contactId}`);
-        }
-        toast.success(i18n.t("contacts.toasts.deleted"));
-        setSelectedContacts([]);
-        setSelectAll(false);
-
-        setSearchParam("");
-        setPageNumber(1);
-    } catch (err) {
-        toastError(err);
-    }
-};
-
-  
   const handleimportContact = async () => {
     try {
-      if (!!fileUploadRef.current.files[0]) {
-        const formData = new FormData();
-        formData.append("file", fileUploadRef.current.files[0]);
-        await api.request({
-          url: `/contacts/upload`,
-          method: "POST",
-          data: formData,
-        });
-      } else {
-        await api.post("/contacts/import");
-      }
+      await api.post("/contacts/import");
       history.go(0);
     } catch (err) {
       toastError(err);
     }
   };
-  
-function getDateLastMessage(contact) {
-    if (!contact) return null;
-    if (!contact.tickets) return null;
 
-    if (contact.tickets.length > 0) {
-        const date = new Date(contact.tickets[contact.tickets.length - 1].updatedAt);
-
-        const day = date.getDate() > 9 ? date.getDate() : `0${date.getDate()}`;
-        const month = (date.getMonth() + 1) > 9 ? (date.getMonth() + 1) : `0${date.getMonth() + 1}`;
-        const year = date.getFullYear().toString().slice(-2);
-
-        const hours = date.getHours() > 9 ? date.getHours() : `0${date.getHours()}`;
-        const minutes = date.getMinutes() > 9 ? date.getMinutes() : `0${date.getMinutes()}`;
-
-        return `${day}/${month}/${year} ${hours}:${minutes}`;
-    }
-
-    return null;
-}
+  const handleOpenImportModal = (  ) => {
+    setOpenModalImport(true);
+  }
 
   const loadMore = () => {
     setPageNumber((prevState) => prevState + 1);
@@ -350,8 +236,16 @@ function getDateLastMessage(contact) {
     }
   };
 
+  const handleCloseModalImport = (  ) => {
+    setOpenModalImport(false);
+  }
+
   return (
     <MainContainer className={classes.mainContainer}>
+      <ImportContactsModal
+        open={openModalImport}
+        onClose={handleCloseModalImport}
+      />
       <NewTicketModal
         modalOpen={newTicketModalOpen}
         initialContact={contactTicket}
@@ -401,92 +295,20 @@ function getDateLastMessage(contact) {
               ),
             }}
           />
-          <Button
-          variant="contained"
-          color="primary"
-          onClick={handleSelectAll}
-      >
-          {selectAll ? "Desmarcar Todos" : "Marcar Todos"}
-        </Button>
-
-      <Can
-      role={user.profile}
-      perform="contacts-page:deleteContact"
-      yes={() => (
-          <Button
-              variant="contained"
-              color="primary"
-              onClick={handleDeleteSelectedContacts}
+          {/*<Button
+            variant="contained"
+            color="primary"
+            onClick={(e) => setConfirmOpen(true)}
           >
-              {selectAll ? "Excluir Todos" : "Excluir"}
+            {i18n.t("contacts.buttons.import")}
+          </Button>*/}
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleOpenImportModal}
+          >
+            {i18n.t("contacts.buttons.import")}
           </Button>
-      )}
-      />	
-
-         <PopupState variant="popover" popupId="demo-popup-menu">
-             {(popupState) => (
-             <React.Fragment>
-                                <Button
-                                    variant="contained"
-                                    color="primary"
-                                    {...bindTrigger(popupState)}
-                                >
-                                    Importar / Exportar
-                                    <ArrowDropDown />
-                                </Button>
-								<Menu {...bindMenu(popupState)}>
-									<MenuItem
-										onClick={() => {
-											setConfirmOpen(true);
-											popupState.close();
-										}}
-									>
-									<ContactPhone
-                                            fontSize="small"
-                                            color="primary"
-                                            style={{
-                                                marginRight: 10,
-                                            }}
-                                        />
-										{i18n.t("contacts.buttons.import")}
-									</MenuItem>
-									<MenuItem
-										onClick={() => {
-											fileUploadRef.current.value = null; // Limpa o valor do input
-											fileUploadRef.current.click(); // Dispara o clique no input de upload
-											popupState.close(); // Fecha o menu
-										}}
-									>
-											<Backup
-                                            fontSize="small"
-                                            color="primary"
-                                            style={{
-                                                marginRight: 10,
-                                            }}
-                                        />
-										{i18n.t("contacts.buttons.importSheet")}
-									</MenuItem>
-                                    <MenuItem>
-                        
-									<CSVLink style={{ textDecoration:'none' }} separator=";" filename={'whaticket.csv'} 
-									data={contacts.map((contact) => ({ name: contact.name, number: contact.number, email: contact.email }))}>
-                                        
-                                        <CloudDownload fontSize="small"
-                                            color="primary"
-                                            style={{
-                                                marginRight: 10,
-                                            
-                                                }}                                                
-                                        />        
-                                        Exportar Excel                                
-                                   </CSVLink>
-                                        
-                                    </MenuItem>
-                                </Menu>
-                            </React.Fragment>
-                        )}
-                    </PopupState>
-					
           <Button
             variant="contained"
             color="primary"
@@ -494,6 +316,11 @@ function getDateLastMessage(contact) {
           >
             {i18n.t("contacts.buttons.add")}
           </Button>
+         <CSVLink style={{ textDecoration:'none'}} separator=";" filename={'contatos.csv'} data={contacts.map((contact) => ({ name: contact.name, number: contact.number, email: contact.email }))}>
+          <Button	variant="contained" color="primary"> 
+            {i18n.t("contacts.buttons.export")}
+          </Button>
+          </CSVLink>		  
 
         </MainHeaderButtonsWrapper>
       </MainHeader>
@@ -502,35 +329,17 @@ function getDateLastMessage(contact) {
         variant="outlined"
         onScroll={handleScroll}
       >
-        <>
-          <input
-              style={{ display: "none" }}
-              id="upload"
-              name="file"
-              type="file"
-              accept=".xls,.xlsx"
-              onChange={() => {
-                setConfirmOpen(true);
-              }}
-              ref={fileUploadRef}
-          />
-        </>
         <Table size="small">
           <TableHead>
             <TableRow>
-            <TableCell padding="checkbox" align="center"/>
-            <TableCell >
-                {i18n.t("Foto de Perfil")}
-            </TableCell>
+              <TableCell padding="checkbox" />
               <TableCell>{i18n.t("contacts.table.name")}</TableCell>
-              <TableCell align="center">{i18n.t("contacts.table.whatsapp")}</TableCell>
-              <TableCell align="center">Messenger</TableCell>
-              <TableCell align="center">Instagram</TableCell>
-              <TableCell align="center">{i18n.t("contacts.table.email")}</TableCell>
-              {/*<TableCell align="center">
-              {"Última Interação"}
+              <TableCell align="center">
+                {i18n.t("contacts.table.whatsapp")}
               </TableCell>
-			  <TableCell align="center">{"Status"}</TableCell>*/}
+              <TableCell align="center">
+                {i18n.t("contacts.table.email")}
+              </TableCell>
               <TableCell align="center">
                 {i18n.t("contacts.table.actions")}
               </TableCell>
@@ -538,93 +347,46 @@ function getDateLastMessage(contact) {
           </TableHead>
           <TableBody>
             <>
-                            {contacts.map((contact) => (
-                                <TableRow key={contact.id}>
-                                    <TableCell padding="checkbox">
-                                        <Checkbox
-                                            checked={selectedContacts.includes(contact.id)}
-                                            onChange={() => handleCheckboxChange(contact.id)}
-                                        />
-                                    </TableCell>
-                                    <TableCell style={{ paddingLeft: 40 }}>{<Avatar src={contact.profilePicUrl} />}</TableCell>
-                                    <TableCell>{contact.name}</TableCell>
-                                    <TableCell align="center">{contact.number}</TableCell>                                    
-                                    <TableCell align="center">{contact.messengerId}</TableCell>
-                                    <TableCell align="center">{contact.instagramId}</TableCell>
-                                    <TableCell align="center">{contact.email}</TableCell>
-                                    {/*<TableCell align="center">
-                                        {getDateLastMessage(contact)}
-                                    </TableCell>
-                                    <TableCell align="center">
-                                        {contact.active ? (
-                                            <CheckCircleIcon
-                                                style={{ color: "green" }}
-                                                fontSize="small"
-                                            />
-                                        ) : (
-                                            <CancelIcon
-                                                style={{ color: "red" }}
-                                                fontSize="small"
-                                            />
-                                        )}
-                                    </TableCell>*/}
-                                    <TableCell align="center">
-                                      {contact.number && (
-                                        <IconButton
-                                          size="small"
-                                          onClick={() => {
-                                            setContactTicket(contact);
-                                            setNewTicketModalOpen(true);
-                                          }}
-                                        >
-                                          <WhatsAppIcon />
-                                        </IconButton>
-                                      )}
-
-                                      {!contact.number && !contact.instagramId && (
-                                        <IconButton
-                                          size="small"
-                                          onClick={() => {
-                                            setContactTicket(contact);
-                                            setNewTicketModalOpen(true);
-                                          }}
-                                        >
-                                          <FacebookIcon />
-                                        </IconButton>
-                                      )}
-                                       {!contact.number && !contact.messengerId && (
-                                        <IconButton
-                                          size="small"
-                                          onClick={() => {
-                                            setContactTicket(contact);
-                                            setNewTicketModalOpen(true);
-                                          }}
-                                        >
-                                          <InstagramIcon />
-                                        </IconButton>
-                                      )}
-                                      <IconButton
-                                        size="small"
-                                        onClick={() => hadleEditContact(contact.id)}
-                                      >
-                                        <EditIcon />
-                                      </IconButton>
-                                      <Can
-                                        role={user.profile}
-                                        perform="contacts-page:deleteContact"
-                                        yes={() => (
-                                          <IconButton
-                                            size="small"
-                                            onClick={(e) => {
-                                              setConfirmOpen(true);
-                                              setDeletingContact(contact);
-                                            }}
-                                          >
-                                            <DeleteOutlineIcon />
-                                          </IconButton>
-                                        )}
-                                      />
-                                    </TableCell>
+              {contacts.map((contact) => (
+                <TableRow key={contact.id}>
+                  <TableCell style={{ paddingRight: 0 }}>
+                    {<Avatar src={contact.profilePicUrl} />}
+                  </TableCell>
+                  <TableCell>{contact.name}</TableCell>
+                  <TableCell align="center">{contact.number}</TableCell>
+                  <TableCell align="center">{contact.email}</TableCell>
+                  <TableCell align="center">
+                    <IconButton
+                      size="small"
+                      onClick={() => {
+                        setContactTicket(contact);
+                        setNewTicketModalOpen(true);
+                      }}
+                    >
+                      <WhatsAppIcon />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      onClick={() => hadleEditContact(contact.id)}
+                    >
+                      <EditIcon />
+                    </IconButton>
+                    <Can
+                      role={user.profile}
+                      perform="contacts-page:deleteContact"
+                      yes={() => (
+                        <IconButton
+                          size="small"
+                          onClick={(e) => {
+                            setConfirmOpen(true);
+                            setDeletingContact(contact);
+                          }}
+                        >
+                          <DeleteOutlineIcon />
+                        </IconButton>
+                      )}
+                    />
+                  </TableCell>
                 </TableRow>
               ))}
               {loading && <TableRowSkeleton avatar columns={3} />}

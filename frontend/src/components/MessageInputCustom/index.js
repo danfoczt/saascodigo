@@ -5,12 +5,12 @@ import { Picker } from "emoji-mart";
 import MicRecorder from "mic-recorder-to-mp3";
 import clsx from "clsx";
 import { isNil } from "lodash";
-import { Reply } from "@material-ui/icons";
+
 import { makeStyles } from "@material-ui/core/styles";
 import Paper from "@material-ui/core/Paper";
 import InputBase from "@material-ui/core/InputBase";
 import CircularProgress from "@material-ui/core/CircularProgress";
-import { green, grey } from "@material-ui/core/colors";
+import { green } from "@material-ui/core/colors";
 import AttachFileIcon from "@material-ui/icons/AttachFile";
 import IconButton from "@material-ui/core/IconButton";
 import MoodIcon from "@material-ui/icons/Mood";
@@ -30,13 +30,9 @@ import axios from "axios";
 
 import RecordingTimer from "./RecordingTimer";
 import { ReplyMessageContext } from "../../context/ReplyingMessage/ReplyingMessageContext";
-import { ForwardMessageContext } from "../../context/ForwarMessage/ForwardMessageContext";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { useLocalStorage } from "../../hooks/useLocalStorage";
 import toastError from "../../errors/toastError";
-
-import Compressor from 'compressorjs';
-import LinearWithValueLabel from "./ProgressBarCustom";
 
 import useQuickMessages from "../../hooks/useQuickMessages";
 
@@ -67,7 +63,6 @@ const useStyles = makeStyles((theme) => ({
     borderRadius: 20,
     flex: 1,
   },
- 
 
   messageInput: {
     paddingLeft: 10,
@@ -77,11 +72,6 @@ const useStyles = makeStyles((theme) => ({
 
   sendMessageIcons: {
     color: "grey",
-  },
-
-  ForwardMessageIcons: {
-    color: grey[700],
-    transform: 'scaleX(-1)'
   },
 
   uploadInput: {
@@ -94,7 +84,7 @@ const useStyles = makeStyles((theme) => ({
     position: "relative",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: theme.palette.inputdigita,
+    backgroundColor: "#eee",
     borderTop: "1px solid rgba(0, 0, 0, 0.12)",
   },
 
@@ -268,23 +258,20 @@ const ActionButtons = (props) => {
     handleCancelAudio,
     handleUploadAudio,
     handleStartRecording,
-    handleOpenModalForward,
-    showSelectMessageCheckbox
   } = props;
   const classes = useStyles();
-  if (inputMessage || showSelectMessageCheckbox) {
-  return (
-    <IconButton
-      aria-label="sendMessage"
-      component="span"
-      onClick={showSelectMessageCheckbox ? handleOpenModalForward : handleSendMessage}
-      disabled={loading || ticketStatus !== "open"} // Desabilita se não for "open"
-    >
-      {showSelectMessageCheckbox ?
-        <Reply className={classes.ForwardMessageIcons} /> : <SendIcon className={classes.sendMessageIcons} />}
-    </IconButton>
-  );
-} else if (recording) {
+  if (inputMessage) {
+    return (
+      <IconButton
+        aria-label="sendMessage"
+        component="span"
+        onClick={handleSendMessage}
+        disabled={loading}
+      >
+        <SendIcon className={classes.sendMessageIcons} />
+      </IconButton>
+    );
+  } else if (recording) {
     return (
       <div className={classes.recorderWrapper}>
         <IconButton
@@ -339,15 +326,15 @@ const CustomInput = (props) => {
     handleInputPaste,
     disableOption,
     handleQuickAnswersClick,
-    replyingMessage
   } = props;
   const classes = useStyles();
   const [quickMessages, setQuickMessages] = useState([]);
   const [options, setOptions] = useState([]);
   const [popupOpen, setPopupOpen] = useState(false);
+
   const { user } = useContext(AuthContext);
 
-  const { list: listQuickMessages } = useQuickMessages();  
+  const { list: listQuickMessages } = useQuickMessages();
 
   useEffect(() => {
     async function fetchData() {
@@ -370,41 +357,29 @@ const CustomInput = (props) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-useEffect(() => {
-  if (
-    isString(inputMessage) &&
-    !isEmpty(inputMessage) &&
-    inputMessage.length > 0
-  ) {
-    const firstChar = inputMessage.charAt(0);
-    setPopupOpen(firstChar === "/");
+  useEffect(() => {
+    if (
+      isString(inputMessage) &&
+      !isEmpty(inputMessage) &&
+      inputMessage.length > 1
+    ) {
+      const firstWord = inputMessage.charAt(0);
+      setPopupOpen(firstWord.indexOf("/") > -1);
 
-    if (firstChar === "/") {
-      const filteredOptions = quickMessages.filter((m) =>
-        m.label.toLowerCase().startsWith(inputMessage.slice(1).toLowerCase())
+      const filteredOptions = quickMessages.filter(
+        (m) => m.label.indexOf(inputMessage) > -1
       );
       setOptions(filteredOptions);
     } else {
-      setOptions([]);
+      setPopupOpen(false);
     }
-  } else {
-    setPopupOpen(false);
-    setOptions([]);
-  }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [inputMessage]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inputMessage]);
 
-  
-    const onKeyPress = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault(); // Impede quebra de linha
-      if (ticketStatus !== "open") {
-        toastError(i18n.t("Você deve aceitar ou reabrir o ticket para enviar mensagens.")); // Exibe erro
-        return;
-      }
-      if (!loading) {
-        handleSendMessage(); // Envia apenas se ticketStatus === "open"
-      }
+  const onKeyPress = (e) => {
+    if (loading || e.shiftKey) return;
+    else if (e.key === "Enter") {
+      handleSendMessage();
     }
   };
 
@@ -438,7 +413,6 @@ useEffect(() => {
         value={inputMessage}
         options={options}
         closeIcon={null}
-        disabled={disableOption()}
         getOptionLabel={(option) => {
           if (isObject(option)) {
             return option.label;
@@ -492,7 +466,7 @@ useEffect(() => {
 const MessageInputCustom = (props) => {
   const { ticketStatus, ticketId } = props;
   const classes = useStyles();
-  const [percentLoading, setPercentLoading] = useState(0);
+
   const [medias, setMedias] = useState([]);
   const [inputMessage, setInputMessage] = useState("");
   const [showEmoji, setShowEmoji] = useState(false);
@@ -503,39 +477,11 @@ const MessageInputCustom = (props) => {
     useContext(ReplyMessageContext);
   const { user } = useContext(AuthContext);
 
-  const [channelType, setChannelType] = useState(null);
-
   const [signMessage, setSignMessage] = useLocalStorage("signOption", true);
-
-  const {
-    selectedMessages,
-    setForwardMessageModalOpen,
-    showSelectMessageCheckbox } = useContext(ForwardMessageContext);
 
   useEffect(() => {
     inputRef.current.focus();
   }, [replyingMessage]);
-
-
-useEffect(() => {
-  const fetchChannelType = async () => {
-    console.log("Valor atual de ticketId no useEffect:", ticketId); // Log para depuração
-    if (!ticketId || ticketId === "undefined" || typeof ticketId !== "number") {
-      console.log("ticketId inválido, ignorando fetchChannelType:", ticketId);
-      return;
-    }
-    try {
-      const { data } = await api.get(`/tickets/${ticketId}`);
-      console.log("Dados recebidos do ticket:", data);
-      console.log("Tipo do canal (whatsapp?.type):", data.whatsapp?.type);
-      setChannelType(data.whatsapp?.type);
-    } catch (err) {
-      console.error("Erro ao buscar o tipo de canal:", err);
-      toastError(err);
-    }
-  };
-  fetchChannelType();
-}, [ticketId]);
 
   useEffect(() => {
     inputRef.current.focus();
@@ -547,15 +493,13 @@ useEffect(() => {
     };
   }, [ticketId, setReplyingMessage]);
 
-
-  const handleOpenModalForward = () => {
-    if (selectedMessages.length === 0) {
-      setForwardMessageModalOpen(false)
-      toastError(i18n.t("messagesList.header.notMessage"));
-      return;
-    }
-    setForwardMessageModalOpen(true);
-  }
+  // const handleChangeInput = e => {
+  // 	if (isObject(e) && has(e, 'value')) {
+  // 		setInputMessage(e.value);
+  // 	} else {
+  // 		setInputMessage(e.target.value)
+  // 	}
+  // };
 
   const handleAddEmoji = (e) => {
     let emoji = e.native;
@@ -622,157 +566,45 @@ useEffect(() => {
 
     const formData = new FormData();
     formData.append("fromMe", true);
+    medias.forEach((media) => {
+      formData.append("medias", media);
+      formData.append("body", media.name);
+    });
 
-    if (channelType !== null) {
-      
-      medias.forEach((media) => {
-        formData.append("medias", media);
-        formData.append("body", media.name);
-      });
-    
-    }else{
+    try {
+      await api.post(`/messages/${ticketId}`, formData);
+    } catch (err) {
+      toastError(err);
+    }
 
-        medias.forEach(async (media, idx) => {
-
-          const file = media;
-
-          if (!file) { return; }
-
-          if (media?.type.split('/')[0] == 'image') {
-            new Compressor(file, {
-              quality: 0.7,
-
-              async success(media) {
-
-                formData.append("medias", media);
-                formData.append("body", media.name);
-
-              },
-              error(err) {
-                alert('erro')
-                console.log(err.message);
-              },
-
-            });
-          } else {
-            formData.append("medias", media);
-            formData.append("body", media.name);
-
-          }
-
-
-        },);
-      }
-
-    setTimeout(async()=> {
-
-      try {
-
-        if (channelType !== null) {
-            await api.post(`/hub-message/${ticketId}`, formData, {
-              onUploadProgress: (event) => {
-                let progress = Math.round(
-                  (event.loaded * 100) / event.total
-                );
-                setPercentLoading(progress);
-                console.log(
-                  `A imagem  está ${progress}% carregada... `
-                );
-              },
-            })
-              .then((response) => {
-                setLoading(false)
-                setMedias([])
-                setPercentLoading(0);
-                console.log(
-                  `A imagem foi enviada para o servidor!`
-
-                );
-              })
-              .catch((err) => {
-                console.error(
-                  `Houve um problema ao realizar o upload da imagem.`
-                );
-                console.log(err);
-              });
-
-        } else{
-
-          await api.post(`/messages/${ticketId}`, formData, {
-            onUploadProgress: (event) => {
-              let progress = Math.round(
-                (event.loaded * 100) / event.total
-              );
-              setPercentLoading(progress);
-              console.log(
-                `A imagem  está ${progress}% carregada... `
-              );
-            },
-          })
-          .then((response) => {
-            setLoading(false)
-            setMedias([])
-            setPercentLoading(0);
-            console.log(
-              `A imagem foi enviada para o servidor!`
-
-            );
-          })
-          .catch((err) => {
-            console.error(
-              `Houve um problema ao realizar o upload da imagem.`
-            );
-            console.log(err);
-          });
-        }  
-
-      } catch (err) {
-        toastError(err);
-      }
-
-
-    },2000)
-
-  }
-
-const handleSendMessage = async () => {
-  if (inputMessage.trim() === "") return;
-  if (ticketStatus !== "open") {
-    toastError(i18n.t("messagesInput.errorTicketNotOpen")); // Exibe erro
-    return;
-  }
-  setLoading(true);
-
-  const message = {
-    read: 1,
-    fromMe: true,
-    mediaUrl: "",
-    body: channelType !== null 
-      ? (signMessage 
-          ? `${user?.name}:\n${inputMessage.trim()}` 
-          : inputMessage.trim()) 
-      : (signMessage 
-          ? `*${user?.name}:*\n${inputMessage.trim()}` 
-          : inputMessage.trim()),
-    quotedMsg: replyingMessage,
-    companyId: user?.companyId
+    setLoading(false);
+    setMedias([]);
   };
 
-  try {
-    if (channelType !== null) {
-      await api.post(`/hub-message/${ticketId}`, message); // Rota para Instagram/Facebook
-    } else {
-      await api.post(`/messages/${ticketId}`, message); // Rota para WhatsApp
-    }
-  } catch (err) {
-    toastError(err);
-  }
+  const handleSendMessage = async () => {
+    if (inputMessage.trim() === "") return;
+    setLoading(true);
 
-  setInputMessage("");
-  setShowEmoji(false);
-  setLoading(false);
-  setReplyingMessage(null);
-};
+    const message = {
+      read: 1,
+      fromMe: true,
+      mediaUrl: "",
+      body: signMessage
+        ? `*${user?.name}:*\n${inputMessage.trim()}`
+        : inputMessage.trim(),
+      quotedMsg: replyingMessage,
+    };
+    try {
+      await api.post(`/messages/${ticketId}`, message);
+    } catch (err) {
+      toastError(err);
+    }
+
+    setInputMessage("");
+    setShowEmoji(false);
+    setLoading(false);
+    setReplyingMessage(null);
+  };
 
   const handleStartRecording = async () => {
     setLoading(true);
@@ -798,17 +630,12 @@ const handleSendMessage = async () => {
       }
 
       const formData = new FormData();
-      /*const filename = `audio-${new Date().getTime()}.mp3`;*/
       const filename = `audio-record-site-${new Date().getTime()}.mp3`;
       formData.append("medias", blob, filename);
       formData.append("body", filename);
       formData.append("fromMe", true);
 
-      if (channelType !== null) {
-        await api.post(`/hub-message/${ticketId}`, formData);
-      } else {
-        await api.post(`/messages/${ticketId}`, formData);
-      }
+      await api.post(`/messages/${ticketId}`, formData);
     } catch (err) {
       toastError(err);
     }
@@ -873,8 +700,7 @@ const handleSendMessage = async () => {
 
         {loading ? (
           <div>
-            {/*<CircularProgress className={classes.circleLoading} />*/}
-            <LinearWithValueLabel progress={percentLoading} />
+            <CircularProgress className={classes.circleLoading} />
           </div>
         ) : (
           <span>
@@ -925,7 +751,6 @@ const handleSendMessage = async () => {
             handleSendMessage={handleSendMessage}
             handleInputPaste={handleInputPaste}
             disableOption={disableOption}
-            replyingMessage={replyingMessage}
             handleQuickAnswersClick={handleQuickAnswersClick}
           />
 
@@ -938,8 +763,6 @@ const handleSendMessage = async () => {
             handleCancelAudio={handleCancelAudio}
             handleUploadAudio={handleUploadAudio}
             handleStartRecording={handleStartRecording}
-            handleOpenModalForward={handleOpenModalForward}
-            showSelectMessageCheckbox={showSelectMessageCheckbox}
           />
         </div>
       </Paper>
@@ -948,4 +771,3 @@ const handleSendMessage = async () => {
 };
 
 export default withWidth()(MessageInputCustom);
-

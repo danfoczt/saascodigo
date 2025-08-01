@@ -57,7 +57,7 @@ const ListTicketsService = async ({
     {
       model: Contact,
       as: "contact",
-      attributes: ["id", "name", "number", "email", "profilePicUrl", "messengerId", "instagramId"]
+      attributes: ["id", "name", "number", "email", "profilePicUrl"]
     },
     {
       model: Queue,
@@ -77,7 +77,7 @@ const ListTicketsService = async ({
     {
       model: Whatsapp,
       as: "whatsapp",
-      attributes: ["name","type"]
+      attributes: ["name"]
     },
   ];
 

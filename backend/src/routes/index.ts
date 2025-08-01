@@ -31,19 +31,9 @@ import filesRoutes from "./filesRoutes";
 import promptRoutes from "./promptRouter";
 import queueIntegrationRoutes from "./queueIntegrationRoutes";
 import forgotsRoutes from "./forgotPasswordRoutes";
-import versionRouter from "./versionRoutes";
-import reportsRoutes from './reportsRoutes';
-
-import hubNotificaMeRoutes from "./hubNotificaMeRoutes";
-
-import hubChannelRoutes from "./hubChannelRoutes";
-import hubMessageRoutes from "./hubMessageRoutes";
-import hubWebhookRoutes from "./hubWebhookRoutes";
-
-/*import webhookMetaRouter from "./webhookMeta";
-
-import webhookInstagramRouter from "./webhookInstagram";*/
-
+import flowDefaultRoutes from "./flowDefaultRoutes";
+import flowBuilder from "./flowBuilderRoutes";
+import flowCampaignRoutes from "./flowCampaignRoutes";
 const routes = Router();
 
 routes.use(userRoutes);
@@ -78,17 +68,9 @@ routes.use(filesRoutes);
 routes.use(promptRoutes);
 routes.use(queueIntegrationRoutes);
 routes.use(forgotsRoutes);
-routes.use(reportsRoutes);
-routes.use(versionRouter);
 
-routes.use(hubNotificaMeRoutes);
-
-routes.use(hubChannelRoutes);
-routes.use(hubMessageRoutes);
-routes.use(hubWebhookRoutes);
-
-/*routes.use(webhookMetaRouter);
-
-routes.use(webhookInstagramRouter);*/
+routes.use(flowDefaultRoutes);
+routes.use(flowBuilder)
+routes.use(flowCampaignRoutes)
 
 export default routes;

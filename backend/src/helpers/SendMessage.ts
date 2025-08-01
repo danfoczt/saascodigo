@@ -25,7 +25,6 @@ export const SendMessage = async (
       const options = await getMessageOptions(
         messageData.fileName,
         messageData.mediaPath,
-        whatsapp.companyId.toString(),
         messageData.body
       );
       if (options) {

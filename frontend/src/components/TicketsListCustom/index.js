@@ -12,10 +12,6 @@ import { i18n } from "../../translate/i18n";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { SocketContext } from "../../context/Socket/SocketContext";
 
-import Highlighter from "react-highlight-words";
-
-import TextField from "@material-ui/core/TextField"; // Adicione isso no topo do arquivo, junto com os outros imports do Material-UI
-
 const useStyles = makeStyles((theme) => ({
   ticketsListWrapper: {
     position: "relative",
@@ -74,11 +70,6 @@ const useStyles = makeStyles((theme) => ({
     alignItems: "center",
     justifyContent: "center",
   },
-
-  highlight: {
-    backgroundColor: "yellow",
-    padding: "0 2px",
-  },
 }));
 
 const reducer = (state, action) => {
@@ -114,14 +105,6 @@ const reducer = (state, action) => {
   if (action.type === "UPDATE_TICKET") {
     const ticket = action.payload;
 
-    // Adicionar log aqui
-  console.log("Atualizando ticket no reducer:", {
-    ticketId: ticket.id,
-    status: ticket.status,
-    lastMessage: ticket.lastMessage,
-    channel: ticket.contact?.messengerId ? 'facebook' : ticket.contact?.instagramId ? 'instagram' : 'whatsapp'
-  });
-
     const ticketIndex = state.findIndex((t) => t.id === ticket.id);
     if (ticketIndex !== -1) {
       state[ticketIndex] = ticket;
@@ -155,15 +138,6 @@ const reducer = (state, action) => {
     return [...state];
   }
 
-  if (action.type === "UPDATE_TICKET_PRESENCE") {
-    const data = action.payload;
-    const ticketIndex = state.findIndex((t) => t.id === data.ticketId);
-    if (ticketIndex !== -1) {
-      state[ticketIndex].presence = data.presence;
-    }
-    return [...state];
-  }
-
   if (action.type === "DELETE_TICKET") {
     const ticketId = action.payload;
     const ticketIndex = state.findIndex((t) => t.id === ticketId);
@@ -179,22 +153,20 @@ const reducer = (state, action) => {
   }
 };
 
-const TicketsListCustom = ({
-  status,
-  searchParam,
-  tags,
-  users,
-  showAll,
-  selectedQueueIds,
-  customTickets, // Renomeado para evitar conflito
-  highlightWords = [],
-  updateCount,
-  style,
-}) => {
+const TicketsListCustom = (props) => {
+  const {
+    status,
+    searchParam,
+    tags,
+    users,
+    showAll,
+    selectedQueueIds,
+    updateCount,
+    style,
+  } = props;
   const classes = useStyles();
   const [pageNumber, setPageNumber] = useState(1);
-  /*const [ticketsList, dispatch] = useReducer(reducer, []);*/
-  const [ticketsList, dispatch] = useReducer(reducer, customTickets || []);
+  const [ticketsList, dispatch] = useReducer(reducer, []);
   const { user } = useContext(AuthContext);
   const { profile, queues } = user;
 
@@ -228,13 +200,6 @@ const TicketsListCustom = ({
     }
   }, [tickets, status, searchParam, queues, profile]);
 
-    useEffect(() => {
-  if (customTickets) {
-    dispatch({ type: "LOAD_TICKETS", payload: customTickets });
-  }
-}, [customTickets]);
-
-    
   useEffect(() => {
     const companyId = localStorage.getItem("companyId");
     const socket = socketManager.getSocket(companyId);
@@ -255,15 +220,6 @@ const TicketsListCustom = ({
     });
 
     socket.on(`company-${companyId}-ticket`, (data) => {
-
-      // Adicionar log aqui
-  console.log("Evento WebSocket recebido (company-ticket):", {
-    action: data.action,
-    ticketId: data.ticket?.id,
-    status: data.ticket?.status,
-    lastMessage: data.ticket?.lastMessage,
-    channel: data.ticket?.contact?.messengerId ? 'facebook' : data.ticket?.contact?.instagramId ? 'instagram' : 'whatsapp'
-  });
       
       if (data.action === "updateUnread") {
         dispatch({
@@ -306,13 +262,6 @@ const TicketsListCustom = ({
       }
     });
 
-    socket.on(`company-${companyId}-presence`, (data) => {
-      dispatch({
-        type: "UPDATE_TICKET_PRESENCE",
-        payload: data,
-      });
-    });
-
     socket.on(`company-${companyId}-contact`, (data) => {
       if (data.action === "update") {
         dispatch({
@@ -327,13 +276,12 @@ const TicketsListCustom = ({
     };
   }, [status, showAll, user, selectedQueueIds, tags, users, profile, queues, socketManager]);
 
-  
   useEffect(() => {
-    const count = ticketsList.filter((ticket) => !ticket.isGroup).length;
-    if (typeof updateCount === 'function') {
-      updateCount(count);
+    if (typeof updateCount === "function") {
+      updateCount(ticketsList.length);
     }
-  }, [ticketsList, updateCount]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ticketsList]);
 
   const loadMore = () => {
     setPageNumber((prevState) => prevState + 1);
@@ -349,60 +297,37 @@ const TicketsListCustom = ({
     }
   };
 
-  
   return (
-    <>
-      <Paper className={classes.ticketsListWrapper} style={style}>
-        <Paper
-          square
-          name="closed"
-          elevation={0}
-          className={classes.ticketsList}
-          onScroll={handleScroll}
-        >
-          <List style={{ paddingTop: 0 }}>
-  {ticketsList.length === 0 && !loading ? (
-    <div className={classes.noTicketsDiv}>
-      <span className={classes.noTicketsTitle}>
-        {i18n.t("ticketsList.noTicketsTitle")}
-      </span>
-      <p className={classes.noTicketsText}>
-        {i18n.t("ticketsList.noTicketsMessage")}
-      </p>
-    </div>
-  ) : (
-    <>
-      {ticketsList
-        .filter((ticket) => ticket.isGroup.toString() === 'false')
-        .map((ticket) => (
-          <div key={ticket.id}>
-            {console.log("Renderizando ticket em TicketsListCustom:", {
-              ticketId: ticket.id,
-              status: ticket.status,
-              channel: ticket.contact?.messengerId ? 'facebook' : ticket.contact?.instagramId ? 'instagram' : 'whatsapp',
-              lastMessage: ticket.lastMessage
-            })}
-            <TicketListItem ticket={ticket} />
-            {ticket.messages && ticket.messages.length > 0 && (
-              <Highlighter
-                highlightClassName={classes.highlight}
-                searchWords={highlightWords}
-                autoEscape={true}
-                textToHighlight={ticket.messages[0].body || ""}
-              />
-            )}
-          </div>
-        ))}
-    </>
-  )}
-  {loading && <TicketsListSkeleton />}
-</List>
-        </Paper>
+    <Paper className={classes.ticketsListWrapper} style={style}>
+      <Paper
+        square
+        name="closed"
+        elevation={0}
+        className={classes.ticketsList}
+        onScroll={handleScroll}
+      >
+        <List style={{ paddingTop: 0 }}>
+          {ticketsList.length === 0 && !loading ? (
+            <div className={classes.noTicketsDiv}>
+              <span className={classes.noTicketsTitle}>
+                {i18n.t("ticketsList.noTicketsTitle")}
+              </span>
+              <p className={classes.noTicketsText}>
+                {i18n.t("ticketsList.noTicketsMessage")}
+              </p>
+            </div>
+          ) : (
+            <>
+              {ticketsList.map((ticket) => (
+                <TicketListItem ticket={ticket} key={ticket.id} />
+              ))}
+            </>
+          )}
+          {loading && <TicketsListSkeleton />}
+        </List>
       </Paper>
-    </>
+    </Paper>
   );
-
-
 };
 
 export default TicketsListCustom;
