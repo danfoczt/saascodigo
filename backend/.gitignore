@@ -1,6 +1,7 @@
 node_modules
 public/*
-automatizaai
+!public/logotipos/
+dist
 !public/.gitkeep
 .env
 .env.test
