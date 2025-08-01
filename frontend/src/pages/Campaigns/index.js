@@ -212,8 +212,6 @@ const Campaigns = () => {
         return "Cancelada";
       case "FINALIZADA":
         return "Finalizada";
-      case "PARCIALMENTE_CONCLUÍDA":
-        return "Parcialmente Concluída";
       default:
         return val;
     }

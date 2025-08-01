@@ -38,7 +38,6 @@ app.use(
     origin: process.env.FRONTEND_URL
   })
 );
-
 app.use(cookieParser());
 app.use(express.json());
 app.use(Sentry.Handlers.requestHandler());

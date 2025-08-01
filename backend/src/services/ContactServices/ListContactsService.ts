@@ -1,13 +1,11 @@
 import { Sequelize, Op } from "sequelize";
 import Contact from "../../models/Contact";
 import Ticket from "../../models/Ticket";
-import Group from "../../models/Group";
 
 interface Request {
   searchParam?: string;
   pageNumber?: string;
   companyId: number;
-  groupId?: number;
 }
 
 interface Response {
@@ -19,14 +17,13 @@ interface Response {
 const ListContactsService = async ({
   searchParam = "",
   pageNumber = "1",
-  companyId,
-  groupId
+  companyId
 }: Request): Promise<Response> => {
-  const whereCondition: any = {
+  const whereCondition = {
     [Op.or]: [
       {
         name: Sequelize.where(
-          Sequelize.fn("LOWER", Sequelize.col("Contact.name")),
+          Sequelize.fn("LOWER", Sequelize.col("name")),
           "LIKE",
           `%${searchParam.toLowerCase().trim()}%`
         )
@@ -37,10 +34,6 @@ const ListContactsService = async ({
       [Op.eq]: companyId
     }
   };
-
-  if (groupId) {
-    whereCondition.groupId = groupId;
-  }
   const limit = 30;
   const offset = limit * (+pageNumber - 1);
 
@@ -52,11 +45,6 @@ const ListContactsService = async ({
         model: Ticket,
         as: "tickets",
         attributes: ["id", "status", "createdAt", "updatedAt"]
-      },
-      {
-        model: Group,
-        as: "group",
-        attributes: ["id", "name"]
       }
     ],
     offset,

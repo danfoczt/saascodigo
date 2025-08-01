@@ -16,10 +16,12 @@ import makeWASocket, {
   WAMessageKey,
   jidNormalizedUser
 } from "@whiskeysockets/baileys";
+import makeInMemoryStore from "@whiskeysockets/baileys/lib/Store/make-in-memory-store";
 import { Op } from "sequelize";
 import { FindOptions } from "sequelize/types";
 import Whatsapp from "../models/Whatsapp";
 import { logger } from "../utils/logger";
+import MAIN_LOGGER from "@whiskeysockets/baileys/lib/Utils/logger";
 import authState from "../helpers/authState";
 import { Boom } from "@hapi/boom";
 import AppError from "../errors/AppError";
@@ -30,6 +32,8 @@ import DeleteBaileysService from "../services/BaileysServices/DeleteBaileysServi
 import NodeCache from 'node-cache';
 import Contact from "../models/Contact";
 import Ticket from "../models/Ticket";
+const loggerBaileys = MAIN_LOGGER.child({});
+loggerBaileys.level = "error";
 
 const msgRetryCounterCache = new NodeCache({
   stdTTL: 600,
@@ -161,13 +165,16 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
         let retriesQrCode = 0;
 
         let wsocket: Session = null;
+        const store = makeInMemoryStore({
+          logger: loggerBaileys
+        });
 
         const { state, saveState } = await authState(whatsapp);
 
         const userDevicesCache = new NodeCache();
 
         wsocket = makeWASocket({
-          logger: logger,
+          logger: loggerBaileys,
           printQRInTerminal: false,
           auth: {
             creds: state.creds,
@@ -347,6 +354,8 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
             }
           }
         );
+
+        store.bind(wsocket.ev);
       })();
     } catch (error) {
       Sentry.captureException(error);

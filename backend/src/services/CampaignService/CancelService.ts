@@ -19,11 +19,7 @@ export async function CancelService(id: number) {
 
   for (let record of recordsToCancel) {
     const job = await campaignQueue.getJob(+record.jobId);
-    if (job && typeof job.remove === "function") {
-      promises.push(job.remove());
-    } else {
-      console.warn(`Job não encontrado para o jobId: ${record.jobId}`);
-    }
+    promises.push(job.remove());
   }
 
   await Promise.all(promises);

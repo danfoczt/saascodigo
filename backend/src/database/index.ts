@@ -37,7 +37,6 @@ import Files from "../models/Files";
 import FilesOptions from "../models/FilesOptions";
 import Prompt from "../models/Prompt";
 import QueueIntegrations from "../models/QueueIntegrations";
-import Group from "../models/Group";
 
 // Adicione a importação do modelo HubNotificaMe
 import HubNotificaMe from "../models/HubNotificaMe"; 
@@ -86,7 +85,6 @@ const models = [
   FilesOptions,
   Prompt,
   QueueIntegrations,
-  Group,
   HubNotificaMe,
 ];
 

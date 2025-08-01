@@ -28,11 +28,6 @@ import path from "path";
 import SendWhatsAppMessage from "../services/WbotServices/SendWhatsAppMessage";
 import EditWhatsAppMessage from "../services/WbotServices/EditWhatsAppMessage";
 import ShowMessageService, { GetWhatsAppFromMessage } from "../services/MessageServices/ShowMessageService";
-
-interface ExtendedFile extends Express.Multer.File {
-  originalMessage?: string;
-}
-
 type IndexQuery = {
   pageNumber: string;
 };
@@ -76,7 +71,7 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
 export const store = async (req: Request, res: Response): Promise<Response> => {
   const { ticketId } = req.params;
   const { body, quotedMsg }: MessageData = req.body;
-  const medias = req.files as ExtendedFile[];
+  const medias = req.files as Express.Multer.File[];
   const { companyId } = req.user;
 
   const ticket = await ShowTicketService(ticketId, companyId);
@@ -86,13 +81,8 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   console.log('bodyyyyyyyyyy:', body)
   if (medias) {
     await Promise.all(
-      medias.map(async (media: ExtendedFile, index) => {
-        await SendWhatsAppMedia({ 
-          media, 
-          ticket, 
-          body: Array.isArray(body) ? body[index] : body,
-          originalMessage: media.originalMessage
-        });
+      medias.map(async (media: Express.Multer.File, index) => {
+        await SendWhatsAppMedia({ media, ticket, body: Array.isArray(body) ? body[index] : body });
       })
     );
   } else {

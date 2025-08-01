@@ -15,7 +15,6 @@ import Company from "./Company";
 import ContactList from "./ContactList";
 import Whatsapp from "./Whatsapp";
 import Files from "./Files";
-import { DataTypes } from "sequelize";
 
 @Table({ tableName: "Campaigns" })
 class Campaign extends Model<Campaign> {
@@ -58,7 +57,7 @@ class Campaign extends Model<Campaign> {
   confirmationMessage5: string;
 
   @Column({ defaultValue: "INATIVA" })
-  status: string; // INATIVA, PROGRAMADA, EM_ANDAMENTO, CANCELADA, FINALIZADA, PARCIALMENTE_CONCLUÍDA
+  status: string; // INATIVA, PROGRAMADA, EM_ANDAMENTO, CANCELADA, FINALIZADA
 
   @Column
   confirmation: boolean;
@@ -74,15 +73,6 @@ class Campaign extends Model<Campaign> {
 
   @Column
   completedAt: Date;
-
-  @Column({ defaultValue: 0, type: DataTypes.DECIMAL(5, 2) })
-  successRate: number;
-
-  @Column
-  lastDeliveryAt: Date;
-
-  @Column
-  timeoutAt: Date;
 
   @CreatedAt
   createdAt: Date;

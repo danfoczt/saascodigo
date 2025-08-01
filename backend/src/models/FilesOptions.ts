@@ -33,9 +33,6 @@ class FilesOptions extends Model<FilesOptions> {
   @Column
   mediaType: string;
 
-  @Column
-  message: string;
-
   @CreatedAt
   createdAt: Date;
 

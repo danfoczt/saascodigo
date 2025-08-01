@@ -33,7 +33,7 @@ const Copyright = () => {
 		<Typography variant="body2" color="textSecondary" align="center">
 			{"Copyright © "}
 			<Link color="inherit" href="#">
-				IDE+ COMERCIAL
+				ZAPXPRESS
 			</Link>{" "}
 			{new Date().getFullYear()}
 			{"."}

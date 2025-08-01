@@ -418,41 +418,25 @@ export const update = async (
   req: Request,
   res: Response
 ): Promise<Response> => {
-  try {
-    console.log("FUNÇÃO UPDATE EXECUTADA");
 
-    const { ticketId } = req.params;
-    const ticketData: TicketData = req.body;
-    const { companyId } = req.user;
+  console.log("FUNÇÃO UPDATE EXECUTADA");
 
-    console.log("VALOR DE ticketId NA FUNÇÃO UPDATE:", ticketId); // Novo log
-    console.log("DADOS ENVIADOS NA FUNÇÃO UPDATE:", ticketData);  // Novo log
+  const { ticketId } = req.params;
+  const ticketData: TicketData = req.body;
+  const { companyId } = req.user;
 
-    const result = await UpdateTicketService({
-      ticketData,
-      ticketId,
-      companyId
-    });
+  console.log("VALOR DE ticketId NA FUNÇÃO UPDATE:", ticketId); // Novo log
+  console.log("DADOS ENVIADOS NA FUNÇÃO UPDATE:", ticketData);  // Novo log
 
-    if (!result) {
-      console.error("UpdateTicketService retornou undefined");
-      return res.status(500).json({ 
-        error: "Erro interno do servidor - serviço retornou undefined" 
-      });
-    }
+  const { ticket } = await UpdateTicketService({
+    ticketData,
+    ticketId,
+    companyId
+  });
 
-    const { ticket } = result;
-
-    console.log("TICKET RETORNADO POR UPDATE:", ticket); // Novo log
-    
-    return res.status(200).json(ticket);
-  } catch (err) {
-    console.error("Erro na função update:", err);
-    return res.status(500).json({ 
-      error: "Erro interno do servidor", 
-      message: err.message 
-    });
-  }
+  console.log("TICKET RETORNADO POR UPDATE:", ticket); // Novo log
+  
+  return res.status(200).json(ticket);
 };
 
 export const remove = async (

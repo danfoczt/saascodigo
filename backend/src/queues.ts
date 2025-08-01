@@ -302,10 +302,14 @@ async function handleSendScheduledMessage(job: any) {
 }
 
 async function handleVerifyCampaigns(job: any) {
+  /**
+   * @todo
+   * Implementar filtro de campanhas
+   */
   const campaigns: { id: number; scheduledAt: string }[] =
     await sequelize.query(
       `select id, "scheduledAt" from "Campaigns" c
-      where status = 'PROGRAMADA'`,
+    where "scheduledAt" between now() and now() + '1 hour'::interval and status = 'PROGRAMADA'`,
       { type: QueryTypes.SELECT }
     );
 
@@ -316,38 +320,22 @@ async function handleVerifyCampaigns(job: any) {
     try {
       const now = moment();
       const scheduledAt = moment(campaign.scheduledAt);
-      
-      // Só processa se o horário atual for maior ou igual ao agendado
-      if (now.isSameOrAfter(scheduledAt)) {
-        logger.info(
-          `Campanha ${campaign.id} iniciando processamento. Horário agendado: ${scheduledAt.format('DD/MM/YYYY HH:mm:ss')}`
-        );
-        
-        // Atualiza o status para EM_ANDAMENTO
-        await Campaign.update(
-          { status: "EM_ANDAMENTO" },
-          { where: { id: campaign.id } }
-        );
-
-        // Adiciona à fila de processamento
-        campaignQueue.add(
-          "ProcessCampaign",
-          {
-            id: campaign.id,
-            delay: 0 // Não precisa de delay pois já passou do horário
-          },
-          {
-            removeOnComplete: true
-          }
-        );
-      } else {
-        logger.info(
-          `Campanha ${campaign.id} ainda não atingiu o horário agendado: ${scheduledAt.format('DD/MM/YYYY HH:mm:ss')}`
-        );
-      }
+      const delay = scheduledAt.diff(now, "milliseconds");
+      logger.info(
+        `Campanha enviada para a fila de processamento: Campanha=${campaign.id}, Delay Inicial=${delay}`
+      );
+      campaignQueue.add(
+        "ProcessCampaign",
+        {
+          id: campaign.id,
+          delay
+        },
+        {
+          removeOnComplete: true
+        }
+      );
     } catch (err: any) {
       Sentry.captureException(err);
-      logger.error(`Erro ao processar campanha ${campaign.id}: ${err.message}`);
     }
   }
 }
@@ -538,7 +526,7 @@ export function randomValue(min: number, max: number) {
   return Math.floor(Math.random() * max) + min;
 }
 
-export async function verifyAndFinalizeCampaign(campaign: any) {
+async function verifyAndFinalizeCampaign(campaign: any) {
   try {
     // Busca a campanha atualizada com a lista de contatos
     const updatedCampaign = await Campaign.findByPk(campaign.id, {
@@ -574,23 +562,7 @@ export async function verifyAndFinalizeCampaign(campaign: any) {
       }
     });
 
-    // Calcula a taxa de sucesso
-    const successRate = validContacts > 0 ? (deliveredCount / validContacts) * 100 : 0;
-    
-    // Atualiza a taxa de sucesso e emite evento para o frontend
-    await updatedCampaign.update({ 
-      successRate,
-      lastDeliveryAt: moment()
-    });
-
-    // Emite evento de atualização para o frontend
-    const io = getIO();
-    io.to(`company-${updatedCampaign.companyId}-mainchannel`).emit(`company-${updatedCampaign.companyId}-campaign`, {
-      action: "update",
-      record: updatedCampaign
-    });
-
-    logger.info(`Campanha ${campaign.id}: ${deliveredCount}/${validContacts} mensagens entregues (${successRate}%)`);
+    logger.info(`Campanha ${campaign.id}: ${deliveredCount}/${validContacts} mensagens entregues`);
 
     // Se todas as mensagens foram entregues, finaliza a campanha
     if (validContacts > 0 && deliveredCount >= validContacts) {
@@ -601,33 +573,13 @@ export async function verifyAndFinalizeCampaign(campaign: any) {
 
       logger.info(`Campanha ${campaign.id} finalizada com sucesso`);
 
-      io.to(`company-${updatedCampaign.companyId}-mainchannel`).emit(`company-${updatedCampaign.companyId}-campaign`, {
+      const io = getIO();
+      io.to(`company-${campaign.companyId}-mainchannel`).emit(`company-${campaign.companyId}-campaign`, {
         action: "update",
         record: updatedCampaign
       });
-    } 
-    // Se não houver novas entregas por 5 minutos, marca como parcialmente concluída
-    else {
-      const lastDelivery = moment(updatedCampaign.lastDeliveryAt);
-      const now = moment();
-      const minutesSinceLastDelivery = now.diff(lastDelivery, 'minutes');
-
-      if (minutesSinceLastDelivery >= 5) {
-        await updatedCampaign.update({ 
-          status: "PARCIALMENTE_CONCLUÍDA",
-          completedAt: moment(),
-          timeoutAt: moment()
-        });
-
-        logger.info(`Campanha ${campaign.id} marcada como parcialmente concluída após ${minutesSinceLastDelivery} minutos sem novas entregas`);
-
-        io.to(`company-${updatedCampaign.companyId}-mainchannel`).emit(`company-${updatedCampaign.companyId}-campaign`, {
-          action: "update",
-          record: updatedCampaign
-        });
-      }
     }
-  } catch (err) {
+  } catch (err: any) {
     Sentry.captureException(err);
     logger.error(`Erro ao verificar finalização da campanha ${campaign.id}: ${err.message}`);
   }
@@ -890,9 +842,9 @@ async function handleDispatchCampaign(job: any) {
         const files = await ShowFileService(campaign?.fileListId!, campaign?.companyId!)
         const folder = path.resolve(publicFolder, `company${campaign?.companyId}`,"fileList", String(files.id))
         for (const [index, file] of files.options.entries()) {
-          // Usa a mensagem original do arquivo se disponível, senão usa a mensagem da campanha
-          const messageToUse = file.message || body;
-          const options = await getMessageOptions(file.name, path.resolve(folder, file.path), String(campaign?.companyId!), messageToUse);
+          /*const options = await getMessageOptions(file.path, path.resolve(folder, file.path), file.name);*/
+
+          const options = await getMessageOptions(file.name, path.resolve(folder, file.path), String(campaign?.companyId!), body);
           await wbot.sendMessage(chatId, { ...options });
         };
       } catch (error) {
