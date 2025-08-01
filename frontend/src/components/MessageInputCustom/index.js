@@ -5,12 +5,13 @@ import { Picker } from "emoji-mart";
 import MicRecorder from "mic-recorder-to-mp3";
 import clsx from "clsx";
 import { isNil } from "lodash";
-import { Reply, ChevronLeft, ChevronRight, Message, TrendingUp } from "@material-ui/icons";
-import { makeStyles, useTheme } from "@material-ui/core/styles";
+
+import { makeStyles } from "@material-ui/core/styles";
 import Paper from "@material-ui/core/Paper";
 import InputBase from "@material-ui/core/InputBase";
 import CircularProgress from "@material-ui/core/CircularProgress";
-import { green, grey, blue, pink, purple, orange } from "@material-ui/core/colors";
+import { green } from "@material-ui/core/colors";
+import AttachFileIcon from "@material-ui/icons/AttachFile";
 import IconButton from "@material-ui/core/IconButton";
 import MoodIcon from "@material-ui/icons/Mood";
 import SendIcon from "@material-ui/icons/Send";
@@ -20,17 +21,8 @@ import MicIcon from "@material-ui/icons/Mic";
 import CheckCircleOutlineIcon from "@material-ui/icons/CheckCircleOutline";
 import HighlightOffIcon from "@material-ui/icons/HighlightOff";
 import { FormControlLabel, Switch } from "@material-ui/core";
+import Autocomplete from "@material-ui/lab/Autocomplete";
 import { isString, isEmpty, isObject, has } from "lodash";
-import AddIcon from "@material-ui/icons/Add";
-import ImageIcon from "@material-ui/icons/Image";
-import DescriptionIcon from "@material-ui/icons/Description";
-import VideocamIcon from "@material-ui/icons/Videocam";
-import LocationOnIcon from "@material-ui/icons/LocationOn";
-import MenuItem from "@material-ui/core/MenuItem";
-import ListItemIcon from "@material-ui/core/ListItemIcon";
-import ListItemText from "@material-ui/core/ListItemText";
-import Button from "@material-ui/core/Button";
-import Box from "@material-ui/core/Box";
 
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
@@ -38,81 +30,71 @@ import axios from "axios";
 
 import RecordingTimer from "./RecordingTimer";
 import { ReplyMessageContext } from "../../context/ReplyingMessage/ReplyingMessageContext";
-import { ForwardMessageContext } from "../../context/ForwarMessage/ForwardMessageContext";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { useLocalStorage } from "../../hooks/useLocalStorage";
 import toastError from "../../errors/toastError";
 
-import Compressor from 'compressorjs';
-import LinearWithValueLabel from "./ProgressBarCustom";
 import useQuickMessages from "../../hooks/useQuickMessages";
 
 const Mp3Recorder = new MicRecorder({ bitRate: 128 });
 
 const useStyles = makeStyles((theme) => ({
   mainWrapper: {
-    backgroundColor: theme.palette.bordabox,
+    backgroundColor: theme.palette.bordabox, //DARK MODE PLW DESIGN//
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
     borderTop: "1px solid rgba(0, 0, 0, 0.12)",
   },
+
   newMessageBox: {
-    backgroundColor: theme.palette.newmessagebox,
+    backgroundColor: theme.palette.newmessagebox, //DARK MODE PLW DESIGN//
     width: "100%",
     display: "flex",
     padding: "7px",
     alignItems: "center",
-    position: "relative",
   },
+
   messageInputWrapper: {
     padding: 6,
     marginRight: 7,
-    backgroundColor: theme.palette.inputdigita,
+    backgroundColor: theme.palette.inputdigita, //DARK MODE PLW DESIGN//
     display: "flex",
     borderRadius: 20,
     flex: 1,
   },
+
   messageInput: {
     paddingLeft: 10,
     flex: 1,
     border: "none",
   },
+
   sendMessageIcons: {
     color: "grey",
   },
-  ForwardMessageIcons: {
-    color: grey[700],
-    transform: 'scaleX(-1)'
-  },
+
   uploadInput: {
     display: "none",
   },
+
   viewMediaInputWrapper: {
     display: "flex",
     padding: "10px 13px",
     position: "relative",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: theme.palette.inputdigita,
+    backgroundColor: "#eee",
     borderTop: "1px solid rgba(0, 0, 0, 0.12)",
   },
+
   emojiBox: {
     position: "absolute",
     bottom: 63,
     width: 40,
     borderTop: "1px solid #e8e8e8",
   },
-  attachmentMenu: {
-    position: "absolute",
-    bottom: "100%",
-    left: 0,
-    width: "200px",
-    backgroundColor: "#fff",
-    borderRadius: "8px",
-    boxShadow: "0 2px 5px rgba(0,0,0,0.2)",
-    zIndex: 1000,
-  },
+
   circleLoading: {
     color: green[500],
     opacity: "70%",
@@ -121,21 +103,26 @@ const useStyles = makeStyles((theme) => ({
     left: "50%",
     marginLeft: -12,
   },
+
   audioLoading: {
     color: green[500],
     opacity: "70%",
   },
+
   recorderWrapper: {
     display: "flex",
     alignItems: "center",
     alignContent: "middle",
   },
+
   cancelAudioIcon: {
     color: "red",
   },
+
   sendAudioIcon: {
     color: "green",
   },
+
   replyginMsgWrapper: {
     display: "flex",
     width: "100%",
@@ -145,6 +132,7 @@ const useStyles = makeStyles((theme) => ({
     paddingLeft: 73,
     paddingRight: 7,
   },
+
   replyginMsgContainer: {
     flex: 1,
     marginRight: 5,
@@ -154,6 +142,7 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     position: "relative",
   },
+
   replyginMsgBody: {
     padding: 10,
     height: "auto",
@@ -161,89 +150,23 @@ const useStyles = makeStyles((theme) => ({
     whiteSpace: "pre-wrap",
     overflow: "hidden",
   },
+
   replyginContactMsgSideColor: {
     flex: "none",
     width: "4px",
     backgroundColor: "#35cd96",
   },
+
   replyginSelfMsgSideColor: {
     flex: "none",
     width: "4px",
     backgroundColor: "#6bcbef",
   },
+
   messageContactName: {
     display: "flex",
     color: "#6bcbef",
     fontWeight: 500,
-  },
-  quickMessagesWrapper: {
-    position: 'relative',
-    width: '100%',
-  },
-  quickMessagesContainer: {
-    display: 'flex',
-    overflowX: 'auto',
-    scrollBehavior: 'smooth',
-    padding: '5px 30px',
-    gap: '8px',
-    position: 'relative',
-    scrollbarWidth: 'none',
-    '&::-webkit-scrollbar': {
-      display: 'none',
-    },
-    '-ms-overflow-style': 'none',
-  },
-  quickMessageButton: {
-    flex: '0 0 auto',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '6px',
-    borderRadius: '8px',
-    padding: '8px 12px',
-    fontSize: '0.75rem',
-    backgroundColor: theme.palette.quicktags.main, 
-    color: '#fff',
-    fontWeight: 500,
-    textTransform: 'none',
-    border: 'none',
-    '& .start-icon': {
-      marginRight: '6px',
-      fontSize: '14px',
-    },
-    '& .end-icon': {
-      marginLeft: '6px',
-      fontSize: '14px',
-    },
-  },
-  navButton: {
-    position: 'absolute',
-    top: '50%',
-    transform: 'translateY(-50%)',
-    zIndex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-    padding: '4px',
-    '&.left': {
-      left: '5px',
-    },
-    '&.right': {
-      right: '5px',
-    },
-  },
-  imageIcon: {
-    color: blue[500],
-  },
-  documentIcon: {
-    color: orange[500],
-  },
-  videoIcon: {
-    color: pink[500],
-  },
-  locationIcon: {
-    color: purple[500],
-  },
-  audioIcon: {
-    color: green[500],
   },
 }));
 
@@ -300,137 +223,27 @@ const SignSwitch = (props) => {
 };
 
 const FileInput = (props) => {
-  const { handleChangeMedias, disableOption, setMedias } = props;
+  const { handleChangeMedias, disableOption } = props;
   const classes = useStyles();
-  const [showOptions, setShowOptions] = useState(false);
-  const fileInputRef = useRef(null);
-  const audioInputRef = useRef(null);
-  const videoInputRef = useRef(null);
-  const documentInputRef = useRef(null);
-
-  const handleOpenOptions = () => {
-    setShowOptions(!showOptions);
-  };
-
-  const handleOptionClick = (type) => {
-    setShowOptions(false);
-    switch(type) {
-      case 'image':
-        fileInputRef.current.click();
-        break;
-      case 'audio':
-        audioInputRef.current.click();
-        break;
-      case 'video':
-        videoInputRef.current.click();
-        break;
-      case 'document':
-        documentInputRef.current.click();
-        break;
-      case 'location':
-        handleShareLocation();
-        break;
-      default:
-        break;
-    }
-  };
-
-  const handleShareLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition((position) => {
-        const locationUrl = `https://maps.google.com/?q=${position.coords.latitude},${position.coords.longitude}`;
-        props.setInputMessage(prev => `${prev}\nMinha localização: ${locationUrl}`);
-      }, (error) => {
-        toastError("Erro ao obter localização: " + error.message);
-      });
-    } else {
-      toastError("Geolocalização não suportada pelo navegador");
-    }
-  };
-
   return (
     <>
-      <div style={{ position: 'relative' }}>
+      <input
+        multiple
+        type="file"
+        id="upload-button"
+        disabled={disableOption()}
+        className={classes.uploadInput}
+        onChange={handleChangeMedias}
+      />
+      <label htmlFor="upload-button">
         <IconButton
           aria-label="upload"
           component="span"
           disabled={disableOption()}
-          onClick={handleOpenOptions}
         >
-          <AddIcon className={classes.sendMessageIcons} />
+          <AttachFileIcon className={classes.sendMessageIcons} />
         </IconButton>
-        
-        {showOptions && (
-          <Paper elevation={3} className={classes.attachmentMenu}>
-            <MenuItem onClick={() => handleOptionClick('image')}>
-              <ListItemIcon>
-                <ImageIcon fontSize="small" className={classes.imageIcon} />
-              </ListItemIcon>
-              <ListItemText primary="Imagem" />
-            </MenuItem>
-            <MenuItem onClick={() => handleOptionClick('document')}>
-              <ListItemIcon>
-                <DescriptionIcon fontSize="small" className={classes.documentIcon} />
-              </ListItemIcon>
-              <ListItemText primary="Documento" />
-            </MenuItem>
-            <MenuItem onClick={() => handleOptionClick('video')}>
-              <ListItemIcon>
-                <VideocamIcon fontSize="small" className={classes.videoIcon} />
-              </ListItemIcon>
-              <ListItemText primary="Vídeo" />
-            </MenuItem>
-            <MenuItem onClick={() => handleOptionClick('location')}>
-              <ListItemIcon>
-                <LocationOnIcon fontSize="small" className={classes.locationIcon} />
-              </ListItemIcon>
-              <ListItemText primary="Localização" />
-            </MenuItem>
-            <MenuItem onClick={() => handleOptionClick('audio')}>
-              <ListItemIcon>
-                <MicIcon fontSize="small" className={classes.audioIcon} />
-              </ListItemIcon>
-              <ListItemText primary="Áudio" />
-            </MenuItem>
-          </Paper>
-        )}
-      </div>
-
-      <input
-        type="file"
-        ref={fileInputRef}
-        accept="image/*"
-        style={{ display: 'none' }}
-        onChange={(e) => {
-          if (e.target.files) handleChangeMedias(Array.from(e.target.files));
-        }}
-      />
-      <input
-        type="file"
-        ref={audioInputRef}
-        accept="audio/*"
-        style={{ display: 'none' }}
-        onChange={(e) => {
-          if (e.target.files) handleChangeMedias(Array.from(e.target.files));
-        }}
-      />
-      <input
-        type="file"
-        ref={videoInputRef}
-        accept="video/*"
-        style={{ display: 'none' }}
-        onChange={(e) => {
-          if (e.target.files) handleChangeMedias(Array.from(e.target.files));
-        }}
-      />
-      <input
-        type="file"
-        ref={documentInputRef}
-        style={{ display: 'none' }}
-        onChange={(e) => {
-          if (e.target.files) handleChangeMedias(Array.from(e.target.files));
-        }}
-      />
+      </label>
     </>
   );
 };
@@ -445,21 +258,17 @@ const ActionButtons = (props) => {
     handleCancelAudio,
     handleUploadAudio,
     handleStartRecording,
-    handleOpenModalForward,
-    showSelectMessageCheckbox
   } = props;
   const classes = useStyles();
-  
-  if (inputMessage || showSelectMessageCheckbox) {
+  if (inputMessage) {
     return (
       <IconButton
         aria-label="sendMessage"
         component="span"
-        onClick={showSelectMessageCheckbox ? handleOpenModalForward : handleSendMessage}
+        onClick={handleSendMessage}
         disabled={loading}
       >
-        {showSelectMessageCheckbox ?
-          <Reply className={classes.ForwardMessageIcons} /> : <SendIcon className={classes.sendMessageIcons} />}
+        <SendIcon className={classes.sendMessageIcons} />
       </IconButton>
     );
   } else if (recording) {
@@ -516,9 +325,56 @@ const CustomInput = (props) => {
     handleSendMessage,
     handleInputPaste,
     disableOption,
-    replyingMessage
+    handleQuickAnswersClick,
   } = props;
   const classes = useStyles();
+  const [quickMessages, setQuickMessages] = useState([]);
+  const [options, setOptions] = useState([]);
+  const [popupOpen, setPopupOpen] = useState(false);
+
+  const { user } = useContext(AuthContext);
+
+  const { list: listQuickMessages } = useQuickMessages();
+
+  useEffect(() => {
+    async function fetchData() {
+      const companyId = localStorage.getItem("companyId");
+      const messages = await listQuickMessages({ companyId, userId: user.id });
+      const options = messages.map((m) => {
+        let truncatedMessage = m.message;
+        if (isString(truncatedMessage) && truncatedMessage.length > 35) {
+          truncatedMessage = m.message.substring(0, 35) + "...";
+        }
+        return {
+          value: m.message,
+          label: `/${m.shortcode} - ${truncatedMessage}`,
+          mediaPath: m.mediaPath,
+        };
+      });
+      setQuickMessages(options);
+    }
+    fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (
+      isString(inputMessage) &&
+      !isEmpty(inputMessage) &&
+      inputMessage.length > 1
+    ) {
+      const firstWord = inputMessage.charAt(0);
+      setPopupOpen(firstWord.indexOf("/") > -1);
+
+      const filteredOptions = quickMessages.filter(
+        (m) => m.label.indexOf(inputMessage) > -1
+      );
+      setOptions(filteredOptions);
+    } else {
+      setPopupOpen(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inputMessage]);
 
   const onKeyPress = (e) => {
     if (loading || e.shiftKey) return;
@@ -540,6 +396,7 @@ const CustomInput = (props) => {
     return i18n.t("messagesInput.placeholderClosed");
   };
 
+
   const setInputRef = (input) => {
     if (input) {
       input.focus();
@@ -549,149 +406,59 @@ const CustomInput = (props) => {
 
   return (
     <div className={classes.messageInputWrapper}>
-      <InputBase
-        inputRef={setInputRef}
-        placeholder={renderPlaceholder()}
-        multiline
-        className={classes.messageInput}
-        maxRows={5}
+      <Autocomplete
+        freeSolo
+        open={popupOpen}
+        id="grouped-demo"
         value={inputMessage}
-        onChange={(e) => setInputMessage(e.target.value)}
+        options={options}
+        closeIcon={null}
+        getOptionLabel={(option) => {
+          if (isObject(option)) {
+            return option.label;
+          } else {
+            return option;
+          }
+        }}
+        onChange={(event, opt) => {
+         
+          if (isObject(opt) && has(opt, "value") && isNil(opt.mediaPath)) {
+            setInputMessage(opt.value);
+            setTimeout(() => {
+              inputRef.current.scrollTop = inputRef.current.scrollHeight;
+            }, 200);
+          } else if (isObject(opt) && has(opt, "value") && !isNil(opt.mediaPath)) {
+            handleQuickAnswersClick(opt);
+
+            setTimeout(() => {
+              inputRef.current.scrollTop = inputRef.current.scrollHeight;
+            }, 200);
+          }
+        }}
+        onInputChange={(event, opt, reason) => {
+          if (reason === "input") {
+            setInputMessage(event.target.value);
+          }
+        }}
         onPaste={onPaste}
         onKeyPress={onKeyPress}
-        disabled={disableOption()}
+        style={{ width: "100%" }}
+        renderInput={(params) => {
+          const { InputLabelProps, InputProps, ...rest } = params;
+          return (
+            <InputBase
+              {...params.InputProps}
+              {...rest}
+              disabled={disableOption()}
+              inputRef={setInputRef}
+              placeholder={renderPlaceholder()}
+              multiline
+              className={classes.messageInput}
+              maxRows={5}
+            />
+          );
+        }}
       />
-    </div>
-  );
-};
-
-const QuickMessages = ({ quickMessages, handleQuickMessageClick, inputMessage }) => {
-  const classes = useStyles();
-  const containerRef = useRef(null);
-  const [scrollPosition, setScrollPosition] = useState(0);
-  const [maxScroll, setMaxScroll] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
-  const [startX, setStartX] = useState(0);
-  const [scrollLeft, setScrollLeft] = useState(0);
-
-  const filteredQuickMessages = inputMessage.startsWith('/') 
-    ? quickMessages.filter(msg => 
-        msg.shortcode.toLowerCase().includes(inputMessage.slice(1).toLowerCase())
-      )
-    : quickMessages;
-
-  useEffect(() => {
-    if (containerRef.current) {
-      setMaxScroll(containerRef.current.scrollWidth - containerRef.current.clientWidth);
-    }
-  }, [filteredQuickMessages]);
-
-  const handleScroll = (direction) => {
-    if (!containerRef.current) return;
-    
-    const container = containerRef.current;
-    const scrollAmount = 200;
-    
-    if (direction === 'left') {
-      container.scrollLeft -= scrollAmount;
-    } else {
-      container.scrollLeft += scrollAmount;
-    }
-    
-    setTimeout(() => {
-      setScrollPosition(container.scrollLeft);
-    }, 300);
-  };
-
-  const handleMouseDown = (e) => {
-    setIsDragging(true);
-    setStartX(e.pageX - containerRef.current.offsetLeft);
-    setScrollLeft(containerRef.current.scrollLeft);
-  };
-
-  const handleMouseLeave = () => {
-    setIsDragging(false);
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
-
-  const handleMouseMove = (e) => {
-    if (!isDragging) return;
-    e.preventDefault();
-    const x = e.pageX - containerRef.current.offsetLeft;
-    const walk = (x - startX) * 2;
-    containerRef.current.scrollLeft = scrollLeft - walk;
-    setScrollPosition(containerRef.current.scrollLeft);
-  };
-
-  const handleTouchStart = (e) => {
-    setIsDragging(true);
-    setStartX(e.touches[0].pageX - containerRef.current.offsetLeft);
-    setScrollLeft(containerRef.current.scrollLeft);
-  };
-
-  const handleTouchMove = (e) => {
-    if (!isDragging) return;
-    const x = e.touches[0].pageX - containerRef.current.offsetLeft;
-    const walk = (x - startX) * 2;
-    containerRef.current.scrollLeft = scrollLeft - walk;
-    setScrollPosition(containerRef.current.scrollLeft);
-  };
-
-  const handleTouchEnd = () => {
-    setIsDragging(false);
-  };
-
-  if (filteredQuickMessages.length === 0) return null;
-
-  return (
-    <div className={classes.quickMessagesWrapper}>
-      {scrollPosition > 0 && (
-        <IconButton 
-          className={`${classes.navButton} left`}
-          onClick={() => handleScroll('left')}
-        >
-          <ChevronLeft />
-        </IconButton>
-      )}
-
-      <div 
-        className={classes.quickMessagesContainer} 
-        ref={containerRef}
-        onScroll={(e) => setScrollPosition(e.target.scrollLeft)}
-        onMouseDown={handleMouseDown}
-        onMouseLeave={handleMouseLeave}
-        onMouseUp={handleMouseUp}
-        onMouseMove={handleMouseMove}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-      >
-        {filteredQuickMessages.map((message, index) => (
-          <Button
-            key={index}
-            variant="contained"
-            disableElevation
-            className={classes.quickMessageButton}
-            onClick={() => handleQuickMessageClick(message)}
-          >
-            <Message className="start-icon" />
-            {message.shortcode}
-            <TrendingUp className="end-icon" />
-          </Button>
-        ))}
-      </div>
-
-      {scrollPosition < maxScroll && (
-        <IconButton 
-          className={`${classes.navButton} right`}
-          onClick={() => handleScroll('right')}
-        >
-          <ChevronRight />
-        </IconButton>
-      )}
     </div>
   );
 };
@@ -699,7 +466,7 @@ const QuickMessages = ({ quickMessages, handleQuickMessageClick, inputMessage })
 const MessageInputCustom = (props) => {
   const { ticketStatus, ticketId } = props;
   const classes = useStyles();
-  const [percentLoading, setPercentLoading] = useState(0);
+
   const [medias, setMedias] = useState([]);
   const [inputMessage, setInputMessage] = useState("");
   const [showEmoji, setShowEmoji] = useState(false);
@@ -711,14 +478,6 @@ const MessageInputCustom = (props) => {
   const { user } = useContext(AuthContext);
 
   const [signMessage, setSignMessage] = useLocalStorage("signOption", true);
-
-  const {
-    selectedMessages,
-    setForwardMessageModalOpen,
-    showSelectMessageCheckbox } = useContext(ForwardMessageContext);
-
-  const [quickMessages, setQuickMessages] = useState([]);
-  const { list: listQuickMessages } = useQuickMessages();
 
   useEffect(() => {
     inputRef.current.focus();
@@ -734,30 +493,25 @@ const MessageInputCustom = (props) => {
     };
   }, [ticketId, setReplyingMessage]);
 
-  useEffect(() => {
-    async function fetchData() {
-      const companyId = localStorage.getItem("companyId");
-      const messages = await listQuickMessages({ companyId, userId: user.id });
-      setQuickMessages(messages);
-    }
-    fetchData();
-  }, []);
-
-  const handleOpenModalForward = () => {
-    if (selectedMessages.length === 0) {
-      setForwardMessageModalOpen(false)
-      toastError(i18n.t("messagesList.header.notMessage"));
-      return;
-    }
-    setForwardMessageModalOpen(true);
-  }
+  // const handleChangeInput = e => {
+  // 	if (isObject(e) && has(e, 'value')) {
+  // 		setInputMessage(e.value);
+  // 	} else {
+  // 		setInputMessage(e.target.value)
+  // 	}
+  // };
 
   const handleAddEmoji = (e) => {
     let emoji = e.native;
     setInputMessage((prevState) => prevState + emoji);
   };
 
-  const handleChangeMedias = (selectedMedias) => {
+  const handleChangeMedias = (e) => {
+    if (!e.target.files) {
+      return;
+    }
+
+    const selectedMedias = Array.from(e.target.files);
     setMedias(selectedMedias);
   };
 
@@ -771,10 +525,11 @@ const MessageInputCustom = (props) => {
     setLoading(true);
     try {
       const extension = blob.type.split("/")[1];
+
       const formData = new FormData();
       const filename = `${new Date().getTime()}.${extension}`;
       formData.append("medias", blob, filename);
-      formData.append("body", message);
+      formData.append("body",  message);
       formData.append("fromMe", true);
 
       await api.post(`/messages/${ticketId}`, formData);
@@ -785,35 +540,24 @@ const MessageInputCustom = (props) => {
     setLoading(false);
   };
   
-  const handleQuickMessageClick = async (message) => {
-    if (message.mediaPath) {
+  const handleQuickAnswersClick = async (value) => {
+    if (value.mediaPath) {
       try {
-        const { data } = await axios.get(message.mediaPath, {
+        const { data } = await axios.get(value.mediaPath, {
           responseType: "blob",
         });
-        await handleUploadQuickMessageMedia(data, message.message);
-        return;
-      } catch (err) {
-        toastError(err);
-      }
-    } else {
-      const messageToSend = signMessage 
-        ? `*${user?.name}:*\n${message.message}` 
-        : message.message;
-      
-      try {
-        await api.post(`/messages/${ticketId}`, {
-          read: 1,
-          fromMe: true,
-          mediaUrl: "",
-          body: messageToSend,
-          quotedMsg: replyingMessage,
-        });
+
+        handleUploadQuickMessageMedia(data, value.value);
         setInputMessage("");
+        return;
+        //  handleChangeMedias(response)
       } catch (err) {
         toastError(err);
       }
     }
+
+    setInputMessage("");
+    setInputMessage(value.value);
   };
 
   const handleUploadMedia = async (e) => {
@@ -822,51 +566,20 @@ const MessageInputCustom = (props) => {
 
     const formData = new FormData();
     formData.append("fromMe", true);
-
-    medias.forEach(async (media, idx) => {
-      const file = media;
-      if (!file) { return; }
-
-      if (media?.type.split('/')[0] == 'image') {
-        new Compressor(file, {
-          quality: 0.7,
-          async success(media) {
-            formData.append("medias", media);
-            formData.append("body", media.name);
-          },
-          error(err) {
-            console.log(err.message);
-          },
-        });
-      } else {
-        formData.append("medias", media);
-        formData.append("body", media.name);
-      }
+    medias.forEach((media) => {
+      formData.append("medias", media);
+      formData.append("body", media.name);
     });
 
-    setTimeout(async()=> {
-      try {
-        await api.post(`/messages/${ticketId}`, formData, {
-          onUploadProgress: (event) => {
-            let progress = Math.round(
-              (event.loaded * 100) / event.total
-            );
-            setPercentLoading(progress);
-          },
-        })
-          .then((response) => {
-            setLoading(false)
-            setMedias([])
-            setPercentLoading(0);
-          })
-          .catch((err) => {
-            console.error(err);
-          });
-      } catch (err) {
-        toastError(err);
-      }
-    },2000)
-  }
+    try {
+      await api.post(`/messages/${ticketId}`, formData);
+    } catch (err) {
+      toastError(err);
+    }
+
+    setLoading(false);
+    setMedias([]);
+  };
 
   const handleSendMessage = async () => {
     if (inputMessage.trim() === "") return;
@@ -987,11 +700,12 @@ const MessageInputCustom = (props) => {
 
         {loading ? (
           <div>
-            <LinearWithValueLabel progress={percentLoading} />
+            <CircularProgress className={classes.circleLoading} />
           </div>
         ) : (
           <span>
             {medias[0]?.name}
+            {/* <img src={media.preview} alt=""></img> */}
           </span>
         )}
         <IconButton
@@ -1008,15 +722,6 @@ const MessageInputCustom = (props) => {
     return (
       <Paper square elevation={0} className={classes.mainWrapper}>
         {replyingMessage && renderReplyingMessage(replyingMessage)}
-        
-        {quickMessages.length > 0 && (
-          <QuickMessages 
-            quickMessages={quickMessages} 
-            handleQuickMessageClick={handleQuickMessageClick}
-            inputMessage={inputMessage}
-          />
-        )}
-
         <div className={classes.newMessageBox}>
           <EmojiOptions
             disabled={disableOption()}
@@ -1028,8 +733,6 @@ const MessageInputCustom = (props) => {
           <FileInput
             disableOption={disableOption}
             handleChangeMedias={handleChangeMedias}
-            setMedias={setMedias}
-            setInputMessage={setInputMessage}
           />
 
           <SignSwitch
@@ -1044,10 +747,11 @@ const MessageInputCustom = (props) => {
             ticketStatus={ticketStatus}
             inputMessage={inputMessage}
             setInputMessage={setInputMessage}
+            // handleChangeInput={handleChangeInput}
             handleSendMessage={handleSendMessage}
             handleInputPaste={handleInputPaste}
             disableOption={disableOption}
-            replyingMessage={replyingMessage}
+            handleQuickAnswersClick={handleQuickAnswersClick}
           />
 
           <ActionButtons
@@ -1059,8 +763,6 @@ const MessageInputCustom = (props) => {
             handleCancelAudio={handleCancelAudio}
             handleUploadAudio={handleUploadAudio}
             handleStartRecording={handleStartRecording}
-            handleOpenModalForward={handleOpenModalForward}
-            showSelectMessageCheckbox={showSelectMessageCheckbox}
           />
         </div>
       </Paper>

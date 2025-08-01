@@ -1,37 +1,33 @@
-
 import * as Sentry from "@sentry/node";
-import Queue from "bull";
-import { addSeconds, differenceInSeconds } from "date-fns";
-import { isArray, isEmpty, isNil } from "lodash";
-import moment from "moment";
-import path from "path";
-import { Op, QueryTypes } from "sequelize";
-import sequelize from "./database";
-import GetDefaultWhatsApp from "./helpers/GetDefaultWhatsApp";
-import GetWhatsappWbot from "./helpers/GetWhatsappWbot";
-import formatBody from "./helpers/Mustache";
+import BullQueue from "bull";
 import { MessageData, SendMessage } from "./helpers/SendMessage";
-import { getIO } from "./libs/socket";
-import { getWbot } from "./libs/wbot";
-import Campaign from "./models/Campaign";
-import CampaignSetting from "./models/CampaignSetting";
-import CampaignShipping from "./models/CampaignShipping";
-import Company from "./models/Company";
+import Whatsapp from "./models/Whatsapp";
+import { logger } from "./utils/logger";
+import moment from "moment";
+import Schedule from "./models/Schedule";
 import Contact from "./models/Contact";
+import { Op, QueryTypes, Sequelize } from "sequelize";
+import GetDefaultWhatsApp from "./helpers/GetDefaultWhatsApp";
+import Campaign from "./models/Campaign";
 import ContactList from "./models/ContactList";
 import ContactListItem from "./models/ContactListItem";
-import Plan from "./models/Plan";
-import Schedule from "./models/Schedule";
+import { isEmpty, isNil, isArray } from "lodash";
+import CampaignSetting from "./models/CampaignSetting";
+import CampaignShipping from "./models/CampaignShipping";
+import GetWhatsappWbot from "./helpers/GetWhatsappWbot";
+import sequelize from "./database";
+import { getMessageOptions } from "./services/WbotServices/SendWhatsAppMedia";
+import { getIO } from "./libs/socket";
+import path from "path";
 import User from "./models/User";
-import Whatsapp from "./models/Whatsapp";
+import Company from "./models/Company";
+import Plan from "./models/Plan";
+import Ticket from "./models/Ticket";
 import ShowFileService from "./services/FileServices/ShowService";
-import SendWhatsAppMedia, { getMessageOptions } from "./services/WbotServices/SendWhatsAppMedia";
+import FilesOptions from './models/FilesOptions';
+import { addSeconds, differenceInSeconds } from "date-fns";
+import formatBody from "./helpers/Mustache";
 import { ClosedAllOpenTickets } from "./services/WbotServices/wbotClosedTickets";
-import FindOrCreateTicketService from "./services/TicketServices/FindOrCreateTicketService";
-const fs = require('fs');
-const mime = require('mime-types');
-const chardet = require('chardet');
-import { logger } from "./utils/logger";
 
 
 const nodemailer = require('nodemailer');
@@ -59,26 +55,24 @@ interface DispatchCampaignData {
   contactListItemId: number;
 }
 
-export const userMonitor = new Queue("UserMonitor", connection);
+export const userMonitor = new BullQueue("UserMonitor", connection);
 
-export const queueMonitor = new Queue("QueueMonitor", connection);
+export const queueMonitor = new BullQueue("QueueMonitor", connection);
 
-export const scheduleMonitor = new Queue("ScheduleMonitor", connection);
-export const sendScheduledMessages = new Queue(
-  "SendSacheduledMessages",
-  connection
-);
-
-export const schedulesRecorrenci = new Queue("schedulesRecorrenci", connection)
-
-export const messageQueue = new Queue("MessageQueue", connection, {
+export const messageQueue = new BullQueue("MessageQueue", connection, {
   limiter: {
     max: limiterMax as number,
     duration: limiterDuration as number
   }
 });
 
-export const campaignQueue = new Queue("CampaignQueue", connection);
+export const scheduleMonitor = new BullQueue("ScheduleMonitor", connection);
+export const sendScheduledMessages = new BullQueue(
+  "SendScheduledMessages",
+  connection
+);
+
+export const campaignQueue = new BullQueue("CampaignQueue", connection);
 
 async function handleSendMessage(job) {
   try {
@@ -100,7 +94,109 @@ async function handleSendMessage(job) {
   }
 }
 
+{/*async function handleVerifyQueue(job) {
+  logger.info("Buscando atendimentos perdidos nas filas");
+  try {
+    const companies = await Company.findAll({
+      attributes: ['id', 'name'],
+      where: {
+        status: true,
+        dueDate: {
+          [Op.gt]: Sequelize.literal('CURRENT_DATE')
+        }
+      },
+      include: [
+        {
+          model: Whatsapp, attributes: ["id", "name", "status", "timeSendQueue", "sendIdQueue"], where: {
+            timeSendQueue: {
+              [Op.gt]: 0
+            }
+          }
+        },
+      ]
+    }); */}
 
+{/*    companies.map(async c => {
+      c.whatsapps.map(async w => {
+
+        if (w.status === "CONNECTED") {
+
+          var companyId = c.id;
+
+          const moveQueue = w.timeSendQueue ? w.timeSendQueue : 0;
+          const moveQueueId = w.sendIdQueue;
+          const moveQueueTime = moveQueue;
+          const idQueue = moveQueueId;
+          const timeQueue = moveQueueTime;
+
+          if (moveQueue > 0) {
+
+            if (!isNaN(idQueue) && Number.isInteger(idQueue) && !isNaN(timeQueue) && Number.isInteger(timeQueue)) {
+
+              const tempoPassado = moment().subtract(timeQueue, "minutes").utc().format();
+              // const tempoAgora = moment().utc().format();
+
+              const { count, rows: tickets } = await Ticket.findAndCountAll({
+                where: {
+                  status: "pending",
+                  queueId: null,
+                  companyId: companyId,
+                  whatsappId: w.id,
+                  updatedAt: {
+                    [Op.lt]: tempoPassado
+                  }
+                },
+                include: [
+                  {
+                    model: Contact,
+                    as: "contact",
+                    attributes: ["id", "name", "number", "email", "profilePicUrl"],
+                    include: ["extraInfo"]
+                  }
+                ]
+              });
+
+              if (count > 0) {
+                tickets.map(async ticket => {
+                  await ticket.update({
+                    queueId: idQueue
+                  });
+
+                  await ticket.reload();
+
+                  const io = getIO();
+                  io.to(ticket.status)
+                    .to("notification")
+                    .to(ticket.id.toString())
+                    .emit(`company-${companyId}-ticket`, {
+                      action: "update",
+                      ticket,
+                      ticketId: ticket.id
+                    });
+
+                  // io.to("pending").emit(`company-${companyId}-ticket`, {
+                  //   action: "update",
+                  //   ticket,
+                  // });
+
+                  logger.info(`Atendimento Perdido: ${ticket.id} - Empresa: ${companyId}`);
+                });
+              } else {
+                logger.info(`Nenhum atendimento perdido encontrado - Empresa: ${companyId}`);
+              }
+            } else {
+              logger.info(`Condição não respeitada - Empresa: ${companyId}`);
+            }
+          }
+        }
+      });
+    });
+  } catch (e: any) {
+    Sentry.captureException(e);
+    logger.error("SearchForQueue -> VerifyQueue: error", e.message);
+    throw e;
+  }
+}; */}
 
 async function handleCloseTicketsAutomatic() {
   const job = new CronJob('*/1 * * * *', async () => {
@@ -121,129 +217,6 @@ async function handleCloseTicketsAutomatic() {
   job.start()
 }
 
-async function handleSendMessageWbot(job) {
-  try {
-    const { data } = job;
-  
-    if(!data.messageData){
-		return;
-	}
-  
-    //console.log(data);
-  
-    const { wbotId, number, text, options } = data.messageData;
- 
-  
-  	//console.log(wbotId);
-  
-    const wbot = await getWbot(Number(wbotId));
-  
-  
-    
-  
-    const sentMessage = await wbot.sendMessage(number,{
-        text: text
-      },
-      {
-        ...options
-      }
-    );
-  
-    //console.log(sentMessage);
-  
-
-  } catch (e: any) {
-    Sentry.captureException(e);
-    logger.error("MessageQueueWbot -> SendMessage: error", e.message);
-    throw e;
-  }
-}
-
-async function handleVerifySchedulesRecorrenci(job) {
-  try {
-    const { count, rows: schedules } = await Schedule.findAndCountAll({
-      where: {
-        status: "ENVIADA",
-        repeatEvery: {
-          [Op.not]: null,
-        },
-        selectDaysRecorrenci: {
-          [Op.not]: '',
-        },
-      },
-      include: [{ model: Contact, as: "contact" }]
-    });
-    if (count > 0 ) {
-      schedules.map(async schedule => {
-        if(schedule?.repeatCount === schedule?.repeatEvery){
-          
-          await schedule.update({
-            repeatEvery: null,
-            selectDaysRecorrenci: null
-          });
-
-        }else{
-          await schedule.update({
-            sentAt: null
-          });
-        }
-        
-        if(schedule?.repeatCount === schedule?.repeatEvery){
-          await schedule.update({
-            repeatEvery: null,
-            selectDaysRecorrenci: null
-          });
-        }else{
-          const newDateRecorrenci = await VerifyRecorrenciDate(schedule);
-        }
-
-      });
-    }
-  } catch (e: any) {
-    Sentry.captureException(e);
-    logger.error("SendScheduledMessage -> Verify: error", e.message);
-    throw e;
-  }
-}
-
-async function VerifyRecorrenciDate(schedule) {
-  const { sendAt,selectDaysRecorrenci } = schedule;
-  const originalDate = moment(sendAt);
-  
-  let dateFound = false;
-  const diasSelecionados = selectDaysRecorrenci.split(', '); // Dias selecionados
-
-  let i = 1;
-  while (!dateFound) {
-    let nextDate = moment(originalDate).add(i, "days");
-    nextDate = nextDate.set({
-      hour: originalDate.hours(),
-      minute: originalDate.minutes(),
-      second: originalDate.seconds(),
-    });
-  
-    // Verifica se o dia da semana da próxima data está na lista de dias selecionados
-    if (diasSelecionados.includes(nextDate.format('dddd'))) {
-      // A data está dentro do período
-      // Faça algo aqui se necessário
-      let update = schedule?.repeatCount;
-      update = update + 1;
-    
-      await schedule.update({
-        status:'PENDENTE',
-        sendAt: nextDate.format("YYYY-MM-DD HH:mm:ssZ"),
-        repeatCount: update,
-      });
-
-      logger.info(`Recorrencia agendada para: ${schedule.contact.name}`);
-      
-      // Define a variável de controle para indicar que uma data foi encontrada
-      dateFound = true;
-    }
-    i++;
-  }
-}
-
 async function handleVerifySchedules(job) {
   try {
     const { count, rows: schedules } = await Schedule.findAndCountAll({
@@ -252,7 +225,7 @@ async function handleVerifySchedules(job) {
         sentAt: null,
         sendAt: {
           [Op.gte]: moment().format("YYYY-MM-DD HH:mm:ss"),
-          [Op.lte]: moment().add("30", "seconds").format("YYYY-MM-DD HH:mm:ss")
+          [Op.lte]: moment().add("300", "seconds").format("YYYY-MM-DD HH:mm:ss")
         }
       },
       include: [{ model: Contact, as: "contact" }]
@@ -267,7 +240,7 @@ async function handleVerifySchedules(job) {
           { schedule },
           { delay: 40000 }
         );
-        logger.info(`Disparo agendado para: ${schedule.contact.name}`);
+        logger.info(`[🧵] Disparo agendado para: ${schedule.contact.name}`);
       });
     }
   } catch (e: any) {
@@ -291,129 +264,44 @@ async function handleSendScheduledMessage(job) {
   }
 
   try {
-    const whatsapp = await Whatsapp.findByPk(schedule?.whatsappId);
-    const queueId = schedule?.queueId;
+    const whatsapp = await GetDefaultWhatsApp(schedule.companyId);
 
-    const prepareMediaMessage = async (schedule: any) => {
-      const url = `public/company${schedule.companyId}/${schedule.mediaPath}`;
-      const fileName = path.basename(url);
-      const mimeType = mime.lookup(url);
-      const buffer = fs.readFileSync(url);
-      
-      if (!buffer || buffer.length === 0) {
-        throw new Error(`Buffer da mídia está vazio para o arquivo: ${url}`);
-      }
-
-      const fileType = mimeType.split('/')[0];
-      const baseMessage = {
-        caption: schedule.body || '',
-        fileName: fileName,
-        mimetype: mimeType
-      };
-
-      switch(fileType) {
-        case 'image':
-          return { image: buffer, ...baseMessage };
-        case 'video':
-          return { video: buffer, ...baseMessage };
-        case 'audio':
-          return { audio: buffer, ptt: false, ...baseMessage };
-        default:
-          return { document: buffer, ...baseMessage };
-      }
-    };
-
-    if (schedule?.geral === true) {
-      const ticket = await FindOrCreateTicketService(
-        schedule.contact,
-        schedule.whatsappId,
-        0,
-        schedule.companyId,
-        schedule.contact,
-        true
-      );
-
-      if (queueId != null) {
-        await ticket.update({
-          queueId,
-          whatsappId: schedule.whatsappId,
-          userId: schedule.userId ?? null,
-          isGroup: false,
-          status: schedule.userId ? "open" : "pending"
-        });
-      } else {
-        await ticket.update({
-          whatsappId: schedule.whatsappId,
-          isGroup: false,
-          status: "pending"
-        });
-      }
-
-      if (schedule?.mediaPath) {
-        try {
-          const mediaMessage = await prepareMediaMessage(schedule);
-          const wbot = await getWbot(whatsapp.id);
-          
-          await wbot.sendMessage(
-            `${ticket?.contact?.number}@s.whatsapp.net`, 
-            mediaMessage
-          );
-        } catch (mediaError) {
-          logger.error(`Erro ao enviar mídia via ticket: ${mediaError}`);
-          throw mediaError;
-        }
-      } else {
-        const wbot = await getWbot(whatsapp.id);
-        await wbot.sendMessage(`${ticket?.contact?.number}@s.whatsapp.net`, {
-          text: schedule?.body
-        });
-      }
-    } else {
-      const wbot = await getWbot(whatsapp.id);
-      const contactNumber = schedule.contact.number;
-
-      if (schedule?.mediaPath) {
-        try {
-          const mediaMessage = await prepareMediaMessage(schedule);
-          await wbot.sendMessage(
-            `${contactNumber}@s.whatsapp.net`, 
-            mediaMessage
-          );
-        } catch (mediaError) {
-          logger.error(`Erro ao enviar mídia diretamente: ${mediaError}`);
-          throw mediaError;
-        }
-      } else {
-        await wbot.sendMessage(`${contactNumber}@s.whatsapp.net`, {
-          text: schedule.body
-        });
-      }
+    let filePath = null;
+    if (schedule.mediaPath) {
+      filePath = path.resolve("public", schedule.mediaPath);
     }
+
+    await SendMessage(whatsapp, {
+      number: schedule.contact.number,
+      body: formatBody(schedule.body, schedule.contact),
+      mediaPath: filePath
+    });
 
     await scheduleRecord?.update({
       sentAt: moment().format("YYYY-MM-DD HH:mm"),
       status: "ENVIADA"
     });
 
-    logger.info(`Mensagem agendada enviada para: ${schedule.contact.name}`);
+    logger.info(`[🧵] Mensagem agendada enviada para: ${schedule.contact.name}`);
     sendScheduledMessages.clean(15000, "completed");
-  } catch (err: any) {
-    Sentry.captureException(err);
+  } catch (e: any) {
+    Sentry.captureException(e);
     await scheduleRecord?.update({
       status: "ERRO"
     });
-    logger.error("SendScheduledMessage -> SendMessage: error", err);
-    throw err;
+    logger.error("SendScheduledMessage -> SendMessage: error", e.message);
+    throw e;
   }
 }
-
-
 
 async function handleVerifyCampaigns(job) {
   /**
    * @todo
    * Implementar filtro de campanhas
    */
+
+  logger.info("[🏁] - Verificando campanhas...");
+
   const campaigns: { id: number; scheduledAt: string }[] =
     await sequelize.query(
       `select id, "scheduledAt" from "Campaigns" c
@@ -422,15 +310,15 @@ async function handleVerifyCampaigns(job) {
     );
 
   if (campaigns.length > 0)
-    logger.info(`Campanhas encontradas: ${campaigns.length}`);
-  
+    logger.info(`[🚩] - Campanhas encontradas: ${campaigns.length}`);
+
   for (let campaign of campaigns) {
     try {
       const now = moment();
       const scheduledAt = moment(campaign.scheduledAt);
       const delay = scheduledAt.diff(now, "milliseconds");
       logger.info(
-        `Campanha enviada para a fila de processamento: Campanha=${campaign.id}, Delay Inicial=${delay}`
+        `[📌] - Campanha enviada para a fila de processamento: Campanha=${campaign.id}, Delay Inicial=${delay}`
       );
       campaignQueue.add(
         "ProcessCampaign",
@@ -446,6 +334,8 @@ async function handleVerifyCampaigns(job) {
       Sentry.captureException(err);
     }
   }
+
+  logger.info("[🏁] - Finalizando verificação de campanhas programadas...");
 }
 
 async function getCampaign(id) {
@@ -564,47 +454,6 @@ function getCampaignValidMessages(campaign) {
   return messages;
 }
 
-function getCampaignValidConfirmationMessages(campaign) {
-  const messages = [];
-
-  if (
-    !isEmpty(campaign.confirmationMessage1) &&
-    !isNil(campaign.confirmationMessage1)
-  ) {
-    messages.push(campaign.confirmationMessage1);
-  }
-
-  if (
-    !isEmpty(campaign.confirmationMessage2) &&
-    !isNil(campaign.confirmationMessage2)
-  ) {
-    messages.push(campaign.confirmationMessage2);
-  }
-
-  if (
-    !isEmpty(campaign.confirmationMessage3) &&
-    !isNil(campaign.confirmationMessage3)
-  ) {
-    messages.push(campaign.confirmationMessage3);
-  }
-
-  if (
-    !isEmpty(campaign.confirmationMessage4) &&
-    !isNil(campaign.confirmationMessage4)
-  ) {
-    messages.push(campaign.confirmationMessage4);
-  }
-
-  if (
-    !isEmpty(campaign.confirmationMessage5) &&
-    !isNil(campaign.confirmationMessage5)
-  ) {
-    messages.push(campaign.confirmationMessage5);
-  }
-
-  return messages;
-}
-
 function getProcessedMessage(msg: string, variables: any[], contact: any) {
   let finalMessage = msg;
 
@@ -635,6 +484,8 @@ export function randomValue(min, max) {
 }
 
 async function verifyAndFinalizeCampaign(campaign) {
+
+  logger.info("[🚨] - Verificando se o envio de campanhas finalizou");
   const { contacts } = campaign.contactList;
 
   const count1 = contacts.length;
@@ -656,6 +507,8 @@ async function verifyAndFinalizeCampaign(campaign) {
     action: "update",
     record: campaign
   });
+
+  logger.info("[🚨] - Fim da verificação de finalização de campanhas");
 }
 
 function calculateDelay(index, baseDelay, longerIntervalAfter, greaterInterval, messageInterval) {
@@ -668,13 +521,20 @@ function calculateDelay(index, baseDelay, longerIntervalAfter, greaterInterval, 
 }
 
 async function handleProcessCampaign(job) {
+  logger.info("[🏁] - Iniciou o processamento da campanha de ID: " + job.data.id);
   try {
     const { id }: ProcessCampaignData = job.data;
     const campaign = await getCampaign(id);
     const settings = await getSettings(campaign);
     if (campaign) {
+
+      logger.info("[🚩] - Localizando e configurando a campanha");
+
       const { contacts } = campaign.contactList;
       if (isArray(contacts)) {
+
+        logger.info("[📌] - Quantidade de contatos a serem enviados: " + contacts.length);
+
         const contactData = contacts.map(contact => ({
           contactId: contact.id,
           campaignId: campaign.id,
@@ -690,6 +550,7 @@ async function handleProcessCampaign(job) {
 
         const queuePromises = [];
         for (let i = 0; i < contactData.length; i++) {
+
           baseDelay = addSeconds(baseDelay, i > longerIntervalAfter ? greaterInterval : messageInterval);
 
           const { contactId, campaignId, variables } = contactData[i];
@@ -700,7 +561,7 @@ async function handleProcessCampaign(job) {
             { removeOnComplete: true }
           );
           queuePromises.push(queuePromise);
-          logger.info(`Registro enviado pra fila de disparo: Campanha=${campaign.id};Contato=${contacts[i].name};delay=${delay}`);
+          logger.info("[🚀] - Cliente de ID: " + contactData[i].contactId + " da campanha de ID: " + contactData[i].campaignId + " com delay: " + delay);
         }
         await Promise.all(queuePromises);
         await campaign.update({ status: "EM_ANDAMENTO" });
@@ -711,8 +572,9 @@ async function handleProcessCampaign(job) {
   }
 }
 
-let ultima_msg = 0;
 async function handlePrepareContact(job) {
+
+  logger.info("Preparando contatos");
   try {
     const { contactId, campaignId, delay, variables }: PrepareContactData =
       job.data;
@@ -724,34 +586,17 @@ async function handlePrepareContact(job) {
     campaignShipping.contactId = contactId;
     campaignShipping.campaignId = campaignId;
 
+    logger.info("[🏁] - Iniciou a preparação do contato | contatoId: " + contactId + " CampanhaID: " + campaignId);
+
     const messages = getCampaignValidMessages(campaign);
     if (messages.length) {
-      const radomIndex = ultima_msg;
-      console.log('ultima_msg:', ultima_msg);
-      ultima_msg++;
-      if (ultima_msg >= messages.length) {
-        ultima_msg = 0;
-      }
+      const radomIndex = randomValue(0, messages.length);
       const message = getProcessedMessage(
         messages[radomIndex],
         variables,
         contact
       );
       campaignShipping.message = `\u200c ${message}`;
-    }
-
-    if (campaign.confirmation) {
-      const confirmationMessages =
-        getCampaignValidConfirmationMessages(campaign);
-      if (confirmationMessages.length) {
-        const radomIndex = randomValue(0, confirmationMessages.length);
-        const message = getProcessedMessage(
-          confirmationMessages[radomIndex],
-          variables,
-          contact
-        );
-        campaignShipping.confirmationMessage = `\u200c ${message}`;
-      }
     }
 
     const [record, created] = await CampaignShipping.findOrCreate({
@@ -762,18 +607,18 @@ async function handlePrepareContact(job) {
       defaults: campaignShipping
     });
 
+    logger.info("[🚩] - Registro de envio de camapanha para contato criado | contatoId: " + contactId + " CampanhaID: " + campaignId);
+
     if (
       !created &&
-      record.deliveredAt === null &&
-      record.confirmationRequestedAt === null
+      record.deliveredAt === null
     ) {
       record.set(campaignShipping);
       await record.save();
     }
 
     if (
-      record.deliveredAt === null &&
-      record.confirmationRequestedAt === null
+      record.deliveredAt === null
     ) {
       const nextJob = await campaignQueue.add(
         "DispatchCampaign",
@@ -791,6 +636,7 @@ async function handlePrepareContact(job) {
     }
 
     await verifyAndFinalizeCampaign(campaign);
+    logger.info("[🏁] - Finalizado a preparação do contato | contatoId: " + contactId + " CampanhaID: " + campaignId);
   } catch (err: any) {
     Sentry.captureException(err);
     logger.error(`campaignQueue -> PrepareContact -> error: ${err.message}`);
@@ -803,6 +649,8 @@ async function handleDispatchCampaign(job) {
     const { campaignShippingId, campaignId }: DispatchCampaignData = data;
     const campaign = await getCampaign(campaignId);
     const wbot = await GetWhatsappWbot(campaign.whatsapp);
+
+    logger.info("[🏁] - Disparando campanha | CampaignShippingId: " + campaignShippingId + " CampanhaID: " + campaignId);
 
     if (!wbot) {
       logger.error(`campaignQueue -> DispatchCampaign -> error: wbot not found`);
@@ -819,9 +667,7 @@ async function handleDispatchCampaign(job) {
       return;
     }
 
-    logger.info(
-      `Disparo de campanha solicitado: Campanha=${campaignId};Registro=${campaignShippingId}`
-    );
+    logger.info("[🚩] - Disparando campanha | CampaignShippingId: " + campaignShippingId + " CampanhaID: " + campaignId);
 
     const campaignShipping = await CampaignShipping.findByPk(
       campaignShippingId,
@@ -832,43 +678,51 @@ async function handleDispatchCampaign(job) {
 
     const chatId = `${campaignShipping.number}@s.whatsapp.net`;
 
-    if (campaign.confirmation && campaignShipping.confirmation === null) {
-      await wbot.sendMessage(chatId, {
-        text: campaignShipping.confirmationMessage
-      });
-      await campaignShipping.update({ confirmationRequestedAt: moment() });
-    } else {
-      await wbot.sendMessage(chatId, {
-        text: campaignShipping.message
-      });
+    let body = campaignShipping.message;
 
-      if (!isNil(campaign.fileListId)) {
-        try {
-          const publicFolder = path.resolve(__dirname, "..", "public", `company${campaign.companyId}`);
-          const files = await ShowFileService(campaign.fileListId, campaign.companyId);
-          const folder = path.resolve(publicFolder, "fileList", String(files.id));
-      
-          for (const [index, file] of files.options.entries()) {
-            const options = await getMessageOptions(file.path, path.resolve(folder, file.path), file.name);
-            await wbot.sendMessage(chatId, { ...options });
-          }
-        } finally {
-          // Caso precise executar alguma ação independentemente de erro
-        }
-      }
-      
+    if (!isNil(campaign.fileListId)) {
 
-      if (campaign.mediaPath) {
-        //const filePath = path.resolve("public", campaign.mediaPath);
-        const filePath = path.resolve(`public/company${campaign.companyId}`, campaign.mediaPath);
-        //const options = await getMessageOptions(campaign.mediaName, filePath);
-        const options = await getMessageOptions(campaign.mediaName, filePath);
-        if (Object.keys(options).length) {
+      logger.info("[🚩] - Recuperando a lista de arquivos | CampaignShippingId: " + campaignShippingId + " CampanhaID: " + campaignId);
+
+      try {
+        const publicFolder = path.resolve(__dirname, "..", "public");
+        const files = await ShowFileService(campaign.fileListId, campaign.companyId)
+        const folder = path.resolve(publicFolder, "fileList", String(files.id))
+        for (const [index, file] of files.options.entries()) {
+          const options = await getMessageOptions(file.path, path.resolve(folder, file.path), file.name);
           await wbot.sendMessage(chatId, { ...options });
-        }
+
+          logger.info("[🚩] - Enviou arquivo: "+ file.name +" | CampaignShippingId: " + campaignShippingId + " CampanhaID: " + campaignId);
+        };
+      } catch (error) {
+        logger.info(error);
       }
-      await campaignShipping.update({ deliveredAt: moment() });
     }
+
+    if (campaign.mediaPath) {
+
+      logger.info("[🚩] - Preparando midia da campanha: "+ campaign.mediaPath +" | CampaignShippingId: " + campaignShippingId + " CampanhaID: " + campaignId);
+
+      const publicFolder = path.resolve(__dirname, "..", "public");
+      const filePath = path.join(publicFolder, campaign.mediaPath);
+
+      const options = await getMessageOptions(campaign.mediaName, filePath, body);
+      if (Object.keys(options).length) {
+        await wbot.sendMessage(chatId, { ...options });
+      }
+    }
+    else {
+
+      logger.info("[🚩] - Enviando mensagem de texto da campanha | CampaignShippingId: " + campaignShippingId + " CampanhaID: " + campaignId);
+
+      await wbot.sendMessage(chatId, {
+        text: body
+      });
+    }
+
+    logger.info("[🚩] - Atualizando campanha para enviada... | CampaignShippingId: " + campaignShippingId + " CampanhaID: " + campaignId);
+
+    await campaignShipping.update({ deliveredAt: moment() });
 
     await verifyAndFinalizeCampaign(campaign);
 
@@ -879,8 +733,9 @@ async function handleDispatchCampaign(job) {
     });
 
     logger.info(
-      `Campanha enviada para: Campanha=${campaignId};Contato=${campaignShipping.contact.name}`
+      `[🏁] - Campanha enviada para: Campanha=${campaignId};Contato=${campaignShipping.contact.name}`
     );
+
   } catch (err: any) {
     Sentry.captureException(err);
     logger.error(err.message);
@@ -906,167 +761,165 @@ async function handleLoginStatus(job) {
 
 
 async function handleInvoiceCreate() {
-  logger.info("GERENDO RECEITA...");
-  const job = new CronJob('*/1 * * * *', async () => {
+  logger.info("Iniciando geração de boletos");
+  const job = new CronJob('*/5 * * * * *', async () => {
+
+
     const companies = await Company.findAll();
     companies.map(async c => {
-    
-      const status = c.status;
-      const dueDate = c.dueDate; 
+      var dueDate = c.dueDate;
       const date = moment(dueDate).format();
       const timestamp = moment().format();
-      const hoje = moment().format("DD/MM/yyyy");
-      const vencimento = moment(dueDate).format("DD/MM/yyyy");
-      const diff = moment(vencimento, "DD/MM/yyyy").diff(moment(hoje, "DD/MM/yyyy"));
-      const dias = moment.duration(diff).asDays();
-    
-      if(status === true){
+      const hoje = moment(moment()).format("DD/MM/yyyy");
+      var vencimento = moment(dueDate).format("DD/MM/yyyy");
 
-      	//logger.info(`EMPRESA: ${c.id} está ATIVA com vencimento em: ${vencimento} | ${dias}`);
-      
-      	//Verifico se a empresa está a mais de 10 dias sem pagamento
-        
-        if(dias <= -3){
-       
-          logger.info(`EMPRESA: ${c.id} está VENCIDA A MAIS DE 3 DIAS... INATIVANDO... ${dias}`);
-          c.status = false;
-          await c.save(); // Save the updated company record
-          logger.info(`EMPRESA: ${c.id} foi INATIVADA.`);
-          logger.info(`EMPRESA: ${c.id} Desativando conexões com o WhatsApp...`);
-          
-          try {
-    		const whatsapps = await Whatsapp.findAll({
-      		where: {
-        		companyId: c.id,
-      		},
-      			attributes: ['id','status','session'],
-    		});
+      var diff = moment(vencimento, "DD/MM/yyyy").diff(moment(hoje, "DD/MM/yyyy"));
+      var dias = moment.duration(diff).asDays();
 
-    		for (const whatsapp of whatsapps) {
+      if (dias < 20) {
+        const plan = await Plan.findByPk(c.planId);
 
-            	if (whatsapp.session) {
-    				await whatsapp.update({ status: "DISCONNECTED", session: "" });
-    				const wbot = getWbot(whatsapp.id);
-    				await wbot.logout();
-                	logger.info(`EMPRESA: ${c.id} teve o WhatsApp ${whatsapp.id} desconectado...`);
-  				}
-    		}
-          
-  		  } catch (error) {
-    		// Lidar com erros, se houver
-    		console.error('Erro ao buscar os IDs de WhatsApp:', error);
-    		throw error;
-  		  }
+        const sql = `SELECT COUNT(*) mycount FROM "Invoices" WHERE "companyId" = ${c.id} AND "dueDate"::text LIKE '${moment(dueDate).format("yyyy-MM-DD")}%';`
+        const invoice = await sequelize.query(sql,
+          { type: QueryTypes.SELECT }
+        );
+        if (invoice[0]['mycount'] > 0) {
 
-        
-        }else{ // ELSE if(dias <= -3){
-        
-          const plan = await Plan.findByPk(c.planId);
-        
-          const sql = `SELECT * FROM "Invoices" WHERE "companyId" = ${c.id} AND "status" = 'open';`
-          const openInvoices = await sequelize.query(sql, { type: QueryTypes.SELECT }) as { id: number, dueDate: Date }[];
+        } else {
+          const sql = `INSERT INTO "Invoices" (detail, status, value, "updatedAt", "createdAt", "dueDate", "companyId")
+          VALUES ('${plan.name}', 'open', '${plan.value}', '${timestamp}', '${timestamp}', '${date}', ${c.id});`
 
-          const existingInvoice = openInvoices.find(invoice => moment(invoice.dueDate).format("DD/MM/yyyy") === vencimento);
-        
-          if (existingInvoice) {
-            // Due date already exists, no action needed
-            //logger.info(`Fatura Existente`);
-        
-          } else if (openInvoices.length > 0) {
-            const updateSql = `UPDATE "Invoices" SET "dueDate" = '${date}', "updatedAt" = '${timestamp}' WHERE "id" = ${openInvoices[0].id};`;
+          const invoiceInsert = await sequelize.query(sql,
+            { type: QueryTypes.INSERT }
+          );
 
-            await sequelize.query(updateSql, { type: QueryTypes.UPDATE });
-        
-            logger.info(`Fatura Atualizada ID: ${openInvoices[0].id}`);
-        
-          } else {
-          
-            const sql = `INSERT INTO "Invoices" (detail, status, value, "updatedAt", "createdAt", "dueDate", "companyId")
-            VALUES ('${plan.name}', 'open', '${plan.value}', '${timestamp}', '${timestamp}', '${date}', ${c.id});`
+          /*           let transporter = nodemailer.createTransport({
+                      service: 'gmail',
+                      auth: {
+                        user: 'email@gmail.com',
+                        pass: 'senha'
+                      }
+                    });
 
-            const invoiceInsert = await sequelize.query(sql, { type: QueryTypes.INSERT });
-        
-            logger.info(`Fatura Gerada para o cliente: ${c.id}`);
+                    const mailOptions = {
+                      from: 'heenriquega@gmail.com', // sender address
+                      to: `${c.email}`, // receiver (use array of string for a list)
+                      subject: 'Fatura gerada - Sistema', // Subject line
+                      html: `Olá ${c.name} esté é um email sobre sua fatura!<br>
+          <br>
+          Vencimento: ${vencimento}<br>
+          Valor: ${plan.value}<br>
+          Link: ${process.env.FRONTEND_URL}/financeiro<br>
+          <br>
+          Qualquer duvida estamos a disposição!
+                      `// plain text body
+                    };
 
-            // Rest of the code for sending email
-          }
-        
-          
-        
-        
-        } // if(dias <= -6){
-        
+                    transporter.sendMail(mailOptions, (err, info) => {
+                      if (err)
+                        console.log(err)
+                      else
+                        console.log(info);
+                    }); */
 
-      }else{ // ELSE if(status === true){
-      
-      	//logger.info(`EMPRESA: ${c.id} está INATIVA`);
-      
+        }
+
+
+
+
+
       }
-    
-    
 
     });
   });
-
-  job.start();
+  job.start()
 }
-
-
 
 handleCloseTicketsAutomatic()
 
 handleInvoiceCreate()
 
 export async function startQueueProcess() {
-  logger.info("Iniciando processamento de filas");
+
+  logger.info("[🏁] - Iniciando processamento de filas");
 
   messageQueue.process("SendMessage", handleSendMessage);
 
   scheduleMonitor.process("Verify", handleVerifySchedules);
 
-  schedulesRecorrenci.process("VerifyRecorrenci", handleVerifySchedulesRecorrenci);
-
   sendScheduledMessages.process("SendMessage", handleSendScheduledMessage);
-
-  campaignQueue.process("VerifyCampaigns", handleVerifyCampaigns);
-
-  campaignQueue.process("ProcessCampaign", handleProcessCampaign);
-
-  campaignQueue.process("PrepareContact", handlePrepareContact);
-
-  campaignQueue.process("DispatchCampaign", handleDispatchCampaign);
 
   userMonitor.process("VerifyLoginStatus", handleLoginStatus);
 
+
+  campaignQueue.process("VerifyCampaigns", 1, handleVerifyCampaigns);
+
+  campaignQueue.process("ProcessCampaign", 1, handleProcessCampaign);
+
+  campaignQueue.process("PrepareContact", 1, handlePrepareContact);
+
+  campaignQueue.process("DispatchCampaign", 1, handleDispatchCampaign);
+
+
   //queueMonitor.process("VerifyQueueStatus", handleVerifyQueue);
 
+  async function cleanupCampaignQueue() {
+    try {
+      await campaignQueue.clean(12 * 3600 * 1000, 'completed');
+      await campaignQueue.clean(24 * 3600 * 1000, 'failed');
 
+      const jobs = await campaignQueue.getJobs(['waiting', 'active']);
+      for (const job of jobs) {
+        if (Date.now() - job.timestamp > 24 * 3600 * 1000) {
+          await job.remove();
+        }
+      }
+    } catch (error) {
+      logger.error('[🚨] - Erro na limpeza da fila de campanhas:', error);
+    }
+  }
+  setInterval(cleanupCampaignQueue, 6 * 3600 * 1000);
+
+  setInterval(async () => {
+    const jobCounts = await campaignQueue.getJobCounts();
+    const memoryUsage = process.memoryUsage();
+
+    logger.info('[📌] - Status da fila de campanhas:', {
+      jobs: jobCounts,
+      memory: {
+        heapUsed: Math.round(memoryUsage.heapUsed / 1024 / 1024) + 'MB',
+        heapTotal: Math.round(memoryUsage.heapTotal / 1024 / 1024) + 'MB'
+      }
+    });
+  }, 5 * 60 * 1000);
+
+  campaignQueue.on('completed', (job) => {
+    logger.info(`[📌] -   Campanha ${job.id} completada em ${Date.now() - job.timestamp}ms`);
+  });
 
   scheduleMonitor.add(
     "Verify",
     {},
     {
-      repeat: { cron: "*/30 * * * * *" }, // De 5s para 30s
+      repeat: { cron: "*/5 * * * * *", key: "verify" },
       removeOnComplete: true
     }
   );
-
 
   campaignQueue.add(
     "VerifyCampaigns",
     {},
     {
-      repeat: { cron: "*/5 * * * *", key: "verify-campaing" }, // De 20s para 5 minutos
+      repeat: { cron: "*/20 * * * * *", key: "verify-campaing" },
       removeOnComplete: true
     }
   );
-
 
   userMonitor.add(
     "VerifyLoginStatus",
     {},
     {
-      repeat: { cron: "*/5 * * * *", key: "verify-login" }, // De 1 minuto para 5 minutos
+      repeat: { cron: "* * * * *", key: "verify-login" },
       removeOnComplete: true
     }
   );

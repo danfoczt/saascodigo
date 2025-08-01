@@ -11,6 +11,7 @@ import ShowUserService from "../services/UserServices/ShowUserService";
 import DeleteUserService from "../services/UserServices/DeleteUserService";
 import SimpleListService from "../services/UserServices/SimpleListService";
 import User from "../models/User";
+import SetLanguageCompanyService from "../services/UserServices/SetLanguageCompanyService";
 
 type IndexQuery = {
   searchParam: string;
@@ -56,7 +57,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     requestUser = await User.findByPk(req.user.id);
   }
 
-  const newUserCompanyId = bodyCompanyId || userCompanyId; 
+  const newUserCompanyId = bodyCompanyId || userCompanyId;
 
   if (req.url === "/signup") {
     if (await CheckSettingsHelper("userCreation") === "disabled") {
@@ -100,6 +101,9 @@ export const update = async (
   req: Request,
   res: Response
 ): Promise<Response> => {
+  if (req.user.profile !== "admin") {
+    throw new AppError("ERR_NO_PERMISSION", 403);
+  }
 
   const { id: requestUserId, companyId } = req.user;
   const { userId } = req.params;
@@ -153,3 +157,15 @@ export const list = async (req: Request, res: Response): Promise<Response> => {
 
   return res.status(200).json(users);
 };
+
+export const setLanguage = async (req: Request, res: Response): Promise<Response> => {
+  const { companyId } = req.user;
+  const {newLanguage} = req.params;
+
+  if( newLanguage !== "pt" && newLanguage !== "en" && newLanguage !== "es" )
+    throw new AppError("ERR_INTERNAL_SERVER_ERROR", 500);
+
+  await SetLanguageCompanyService( companyId, newLanguage );
+
+  return res.status(200).json({message: "Language updated successfully"});
+}

@@ -56,6 +56,9 @@ const reducer = (state, action) => {
     const prompts = action.payload;
     const newPrompts = [];
 
+    if( prompts.length === 0 )
+      return [];
+
     prompts.forEach((prompt) => {
       const promptIndex = state.findIndex((p) => p.id === prompt.id);
       if (promptIndex !== -1) {
@@ -128,8 +131,7 @@ const Prompts = () => {
     (async () => {
       setLoading(true);
       try {
-        const { data } = await api.get("/prompt");
-        dispatch({ type: "LOAD_PROMPTS", payload: data.prompts });
+        getPrompts(  );
 
         setLoading(false);
       } catch (err) {
@@ -157,6 +159,12 @@ const Prompts = () => {
     };
   }, [companyId, socketManager]);
 
+  const getPrompts = async (  ) => {
+
+    const { data } = await api.get("/prompt");
+    dispatch({ type: "LOAD_PROMPTS", payload: data.prompts });
+  }
+
   const handleOpenPromptModal = () => {
     setPromptModalOpen(true);
     setSelectedPrompt(null);
@@ -179,8 +187,11 @@ const Prompts = () => {
 
   const handleDeletePrompt = async (promptId) => {
     try {
+
       const { data } = await api.delete(`/prompt/${promptId}`);
+      dispatch({type: "DELETE_PROMPT", payload: promptId});
       toast.info(i18n.t(data.message));
+  
     } catch (err) {
       toastError(err);
     }
@@ -189,24 +200,6 @@ const Prompts = () => {
 
   return (
     <MainContainer>
-      {/* Box vermelha com o aviso */}
-      <Paper className={classes.redBox} variant="outlined">
-        <Typography variant="body1">
-          <strong>Aviso Importante:</strong> Para todos os usuários do Whaticket que notaram uma interrupção no funcionamento do OpenAI, gostaríamos de esclarecer que isso não se trata de um erro do sistema. O OpenAI oferece um crédito gratuito de $5 USD para novos cadastros, porém, este benefício também está sujeito a um limite de tempo, geralmente em torno de três meses. Quando o crédito disponibilizado se esgota, é necessário recarregar a conta para continuar utilizando o serviço. É importante estar ciente dessa política para garantir uma experiência contínua e sem interrupções no uso do OpenAI com o Whaticket. Se você notou que o serviço parou de funcionar, verifique se seu crédito gratuito expirou e considere a recarga da conta, se necessário. Estamos à disposição para ajudar e esclarecer quaisquer dúvidas adicionais que possam surgir. Obrigado pela compreensão e continuaremos trabalhando para oferecer o melhor serviço possível aos nossos usuários.
-        </Typography>
-        {/* Links úteis */}
-        <Typography variant="body1">
-          <strong>Links Úteis:</strong>
-          <br />
-          Uso: <a href="https://platform.openai.com/usage">https://platform.openai.com/usage</a>
-          <br />
-          Fatura: <a href="https://platform.openai.com/account/billing/overview">https://platform.openai.com/account/billing/overview</a>
-          <br />
-          API: <a href="https://platform.openai.com/api-keys">https://platform.openai.com/api-keys</a>
-        </Typography>
-      </Paper>
-      {/* Fim da box vermelha */}
-
       <ConfirmationModal
         title={
           selectedPrompt &&
@@ -223,6 +216,7 @@ const Prompts = () => {
         open={promptModalOpen}
         onClose={handleClosePromptModal}
         promptId={selectedPrompt?.id}
+        refreshPrompts={getPrompts}
       />
       <MainHeader>
         <Title>{i18n.t("prompts.title")}</Title>
@@ -259,7 +253,7 @@ const Prompts = () => {
               {prompts.map((prompt) => (
                 <TableRow key={prompt.id}>
                   <TableCell align="left">{prompt.name}</TableCell>
-                  <TableCell align="left">{prompt.queue.name}</TableCell>
+                  <TableCell align="left">{prompt.queue?.name}</TableCell>
                   <TableCell align="left">{prompt.maxTokens}</TableCell>
                   <TableCell align="center">
                     <IconButton

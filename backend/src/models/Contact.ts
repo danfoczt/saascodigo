@@ -47,6 +47,10 @@ class Contact extends Model<Contact> {
   @Column
   isGroup: boolean;
 
+  @Default(false)
+  @Column
+  disableBot: boolean;
+
   @CreatedAt
   createdAt: Date;
 
@@ -59,17 +63,9 @@ class Contact extends Model<Contact> {
   @HasMany(() => ContactCustomField)
   extraInfo: ContactCustomField[];
 
-  @Default(true)
-  @Column
-  active: boolean;
-
   @ForeignKey(() => Company)
   @Column
   companyId: number;
-
-  @Default(false)
-  @Column
-  disableBot: boolean
 
   @BelongsTo(() => Company)
   company: Company;

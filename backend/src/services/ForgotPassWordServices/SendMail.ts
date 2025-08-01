@@ -29,14 +29,12 @@ const SendMail = async (email: string, tokenSenha: string) => {
   });
   if (hasResult === true) {
     const { hasResults, datas } = await insertToken(email, tokenSenha);
-    const companyName = process.env.COMPANY_NAME || "Sistema Multconversa";
-
     async function sendEmail() {
       try {
         const mailOptions = {
           from: fromEmail,
           to: email,
-          subject: `Redefinição de Senha - ${companyName}`,
+          subject: "Redefinição de Senha - S-WhiteLabel",
           html: ` <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html dir="ltr" lang="pt">
  <head>
@@ -45,7 +43,19 @@ const SendMail = async (email: string, tokenSenha: string) => {
   <meta name="x-apple-disable-message-reformatting">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta content="telephone=no" name="format-detection">
-  <title>Redefinição de Senha</title>
+  <title>Novo modelo</title><!--[if (mso 16)]>
+    <style type="text/css">
+    a {text-decoration: none;}
+    </style>
+    <![endif]--><!--[if gte mso 9]><style>sup { font-size: 100% !important; }</style><![endif]--><!--[if gte mso 9]>
+<xml>
+    <o:OfficeDocumentSettings>
+    <o:AllowPNG></o:AllowPNG>
+    <o:PixelsPerInch>96</o:PixelsPerInch>
+    </o:OfficeDocumentSettings>
+</xml>
+<![endif]--><!--[if !mso]><!-- -->
+  <link href="https://fonts.googleapis.com/css?family=Roboto:400,400i,700,700i" rel="stylesheet"><!--<![endif]-->
   <style type="text/css">
 .rollover:hover .rollover-first {
 	max-height:0px!important;
@@ -92,12 +102,7 @@ a[x-apple-data-detectors] {
 @media screen and (max-width:384px) {.mail-message-content { width:414px!important } }
 </style>
  </head>
- <body style="width:100%;font-family:roboto, 'helvetica neue', helvetica, arial, sans-serif;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;padding:0;Margin:0">
-  <div style="text-align: center;">
-    <img src="/public/logotipos/logo_w.png" alt="Logo ${companyName}" style="width: 200px;">
-    <h1 style="line-height:36px;font-family:roboto, 'helvetica neue', helvetica, arial, sans-serif;font-size:30px;font-weight:bold;color:#212121">Bem-vindo à ${companyName}</h1>
-    <p style="line-height:24px;color:#131313;font-size:16px">Você solicitou recuperação de senha do Whaticket!</p>
-  </div>
+ <body data-new-gr-c-s-check-loaded="14.1021.0" data-gr-ext-installed style="width:100%;font-family:roboto, 'helvetica neue', helvetica, arial, sans-serif;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;padding:0;Margin:0">
   <div dir="ltr" class="es-wrapper-color" lang="pt" style="background-color:#F8F9FD"><!--[if gte mso 9]>
 			<v:background xmlns:v="urn:schemas-microsoft-com:vml" fill="t">
 				<v:fill type="tile" color="#f8f9fd"></v:fill>
@@ -117,7 +122,7 @@ a[x-apple-data-detectors] {
                   <td align="center" valign="top" style="padding:0;Margin:0;width:540px">
                    <table cellpadding="0" cellspacing="0" width="100%" role="presentation" style="mso-table-lspace:0pt;mso-table-rspace:0pt;border-collapse:collapse;border-spacing:0px">
                      <tr>
-                      <td align="center" style="padding:0;Margin:0;font-size:0px"><img src="https://vip.plwdesign.online/wp-content/uploads/2023/04/Clube-de-Assinantes-PLW-600-x-200-px-2-300x100.png" alt style="display:block;border:0;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic" width="205"></td>
+                      <td align="center" style="padding:0;Margin:0;font-size:0px"><img src="https://scriptswhitelabel.com.br/wp-content/uploads/2023/09/logo-removebg-preview.png" alt style="display:block;border:0;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic" width="205"></td>
                      </tr>
                    </table></td>
                  </tr>
@@ -137,7 +142,7 @@ a[x-apple-data-detectors] {
                   <td align="center" valign="top" style="padding:0;Margin:0;width:560px">
                    <table cellpadding="0" cellspacing="0" width="100%" role="presentation" style="mso-table-lspace:0pt;mso-table-rspace:0pt;border-collapse:collapse;border-spacing:0px">
                      <tr>
-                      <td align="center" style="padding:0;Margin:0;padding-bottom:10px"><h1 style="Margin:0;line-height:36px;mso-line-height-rule:exactly;font-family:roboto, 'helvetica neue', helvetica, arial, sans-serif;font-size:30px;font-style:normal;font-weight:bold;color:#212121">Bem-vindo à PLW Design</h1></td>
+                      <td align="center" style="padding:0;Margin:0;padding-bottom:10px"><h1 style="Margin:0;line-height:36px;mso-line-height-rule:exactly;font-family:roboto, 'helvetica neue', helvetica, arial, sans-serif;font-size:30px;font-style:normal;font-weight:bold;color:#212121">Bem-vindo à Scripts WhiteLabel</h1></td>
                      </tr>
                      <tr>
                       <td align="center" style="padding:0;Margin:0;padding-top:10px;padding-bottom:10px"><p style="Margin:0;-webkit-text-size-adjust:none;-ms-text-size-adjust:none;mso-line-height-rule:exactly;font-family:roboto, 'helvetica neue', helvetica, arial, sans-serif;line-height:24px;color:#131313;font-size:16px">Você solicitou recuperação de senha do Whaticket!</p></td>

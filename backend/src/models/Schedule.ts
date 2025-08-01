@@ -15,7 +15,6 @@ import Contact from "./Contact";
 import Ticket from "./Ticket";
 import User from "./User";
 
-
 @Table
 class Schedule extends Model<Schedule> {
   @PrimaryKey
@@ -57,15 +56,6 @@ class Schedule extends Model<Schedule> {
   @UpdatedAt
   updatedAt: Date;
 
-  @Column
-  geral: boolean;
-
-  @Column
-  queueId: number;
-
-  @Column
-  whatsappId: number;
-
   @BelongsTo(() => Contact, "contactId")
   contact: Contact;
 
@@ -80,19 +70,9 @@ class Schedule extends Model<Schedule> {
 
   @Column
   mediaPath: string;
-  
+
   @Column
   mediaName: string;
-
-  @Column
-  repeatEvery: string;
-
-  @Column
-  repeatCount: string;
-
-  @Column
-  selectDaysRecorrenci: string
-
 }
 
 export default Schedule;

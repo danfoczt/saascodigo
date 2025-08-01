@@ -1,120 +1,45 @@
-import * as Sentry from "@sentry/node";
-import fs from "fs/promises";
-import path from "path";
-import mime from "mime-types";
-import { WAMessageContent, WAMessage } from "@whiskeysockets/baileys";
-
 import Whatsapp from "../models/Whatsapp";
 import GetWhatsappWbot from "./GetWhatsappWbot";
-import AppError from "../errors/AppError";
-import { logger } from "../utils/logger";
+import fs from "fs";
 
-export interface MessageData {
-  number: string;
+import { getMessageOptions } from "../services/WbotServices/SendWhatsAppMedia";
+
+export type MessageData = {
+  number: number | string;
   body: string;
   mediaPath?: string;
-  companyId: number;
-}
+  fileName?: string;
+};
 
 export const SendMessage = async (
   whatsapp: Whatsapp,
   messageData: MessageData
-): Promise<WAMessage> => {
-  let wbot;
+): Promise<any> => {
   try {
-    wbot = await GetWhatsappWbot(whatsapp);
-  } catch (error: any) {
-    logger.error(`Failed to get Wbot for WhatsApp ID ${whatsapp.id}: ${error.message}`);
-    throw new AppError(`ERR_GETTING_WAPP_BOT: ${error.message}`, 500);
-  }
+    const wbot = await GetWhatsappWbot(whatsapp);
+    const chatId = `${messageData.number}@s.whatsapp.net`;
 
-  const chatId = `${messageData.number}@s.whatsapp.net`;
-  let messageContent: WAMessageContent;
+    let message;
 
-  try {
     if (messageData.mediaPath) {
-      const fullPath = path.resolve(
-        "public",
-        `company${messageData.companyId}`,
-        messageData.mediaPath
+      const options = await getMessageOptions(
+        messageData.fileName,
+        messageData.mediaPath,
+        messageData.body
       );
-      const fileName = path.basename(fullPath);
-      const mimeType = mime.lookup(fullPath);
-
-      if (!mimeType) {
-        throw new AppError(`Could not determine mime type for media: ${fileName}`, 400);
-      }
-
-      const fileBuffer = await fs.readFile(fullPath);
-      if (!fileBuffer || fileBuffer.length === 0) {
-        throw new AppError(`Media file is empty: ${fileName}`, 400);
-      }
-
-      const fileType = mimeType.split("/")[0];
-      const caption = messageData.body || "";
-
-      switch (fileType) {
-        case "image":
-          messageContent = { 
-            image: fileBuffer, 
-            mimetype: mimeType, 
-            caption: caption, 
-            fileName: fileName 
-          } as WAMessageContent;
-          break;
-        case "video":
-          messageContent = { 
-            video: fileBuffer, 
-            mimetype: mimeType, 
-            caption: caption, 
-            fileName: fileName 
-          } as WAMessageContent;
-          break;
-        case "audio":
-          const isPtt = mimeType.includes("ogg");
-          messageContent = { 
-            audio: fileBuffer, 
-            mimetype: mimeType, 
-            ptt: isPtt, 
-            fileName: fileName 
-          } as WAMessageContent;
-          if (!isPtt && caption) {
-            logger.warn(`Caption for non-PTT audio might not be displayed: ${fileName}`);
-          }
-          break;
-        default:
-          messageContent = { 
-            document: fileBuffer, 
-            mimetype: mimeType, 
-            fileName: fileName, 
-            caption: caption 
-          } as WAMessageContent;
-          break;
+      if (options) {
+        const body = fs.readFileSync(messageData.mediaPath);
+        message = await wbot.sendMessage(chatId, {
+          ...options
+        });
       }
     } else {
-      if (!messageData.body.trim()) {
-        throw new AppError("Cannot send an empty text message.", 400);
-      }
-      messageContent = { text: `\u200e${messageData.body}` } as WAMessageContent;
+      const body = `\u200e ${messageData.body}`;
+      message = await wbot.sendMessage(chatId, { text: body });
     }
 
-    logger.debug(`Sending message to ${chatId} via WhatsApp ${whatsapp.id}`);
-    const sentMessage = await wbot.sendMessage(chatId, messageContent);
-
-    if (!sentMessage) {
-      throw new AppError("Failed to send message: Wbot returned undefined", 500);
-    }
-
-    logger.info(`Message sent successfully to ${chatId} (ID: ${sentMessage.key.id})`);
-    return sentMessage;
-
+    return message;
   } catch (err: any) {
-    Sentry.captureException(err);
-    logger.error(`Error sending message to ${chatId}: ${err.message}`);
-
-    if (err instanceof AppError) {
-      throw err;
-    }
-    throw new AppError(`ERR_SENDING_WAPP_MSG: ${err.message}`, 500);
+    throw new Error(err);
   }
 };

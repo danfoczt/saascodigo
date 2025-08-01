@@ -15,7 +15,7 @@ import Whatsapp from "../../models/Whatsapp";
 import { logger } from "../../utils/logger";
 import createOrUpdateBaileysService from "../BaileysServices/CreateOrUpdateBaileysService";
 import CreateMessageService from "../MessageServices/CreateMessageService";
-import { addContactsUpdateJob } from "./ProcessContactsUpdate";
+import Company from "../../models/Company";
 
 type Session = WASocket & {
   id?: number;
@@ -32,15 +32,12 @@ const wbotMonitor = async (
   companyId: number
 ): Promise<void> => {
   try {
-  
-    //console.log(wbot);
-  
     wbot.ws.on("CB:call", async (node: BinaryNode) => {
       const content = node.content[0] as any;
 
       if (content.tag === "offer") {
         const { from, id } = node.attrs;
-        //console.log(`${from} is calling you with id ${id}`);
+
       }
 
       if (content.tag === "terminate") {
@@ -48,10 +45,19 @@ const wbotMonitor = async (
           where: { key: "call", companyId },
         });
 
+        const translatedMessage = {
+          'pt': "*Mensagem Automática:*\n\nAs chamadas de voz e vídeo estão desabilitas para esse WhatsApp, favor enviar uma mensagem de texto. Obrigado",
+          'en': "*Automatic Message:*\n\nVoice and video calls are disabled for this WhatsApp, please send a text message. Thank you",
+          'es': "*Mensaje Automático:*\n\nLas llamadas de voz y video están deshabilitadas para este WhatsApp, por favor envía un mensaje de texto. Gracias"
+        }
+
         if (sendMsgCall.value === "disabled") {
+
+          const company = await Company.findByPk(companyId);
+
           await wbot.sendMessage(node.attrs.from, {
             text:
-              "*Mensagem Automática:*\n\nAs chamadas de voz e vídeo estão desabilitas para esse WhatsApp, favor enviar uma mensagem de texto. Obrigado",
+              translatedMessage[company.language],
           });
 
           const number = node.attrs.from.replace(/\D/g, "");
@@ -62,7 +68,7 @@ const wbotMonitor = async (
 
           const ticket = await Ticket.findOne({
             where: {
-              contactId: contact?.id,
+              contactId: contact.id,
               whatsappId: wbot.id,
               //status: { [Op.or]: ["close"] },
               companyId
@@ -91,7 +97,7 @@ const wbotMonitor = async (
           await ticket.update({
             lastMessage: body,
           });
-          
+
 
           if(ticket.status === "closed") {
             await ticket.update({
@@ -104,22 +110,13 @@ const wbotMonitor = async (
       }
     });
 
-  	const allowupserts = await Setting.findOne({
-    	where: { key: "allowupserts", companyId: 1 },
-    });
-  
-  	
+    wbot.ev.on("contacts.upsert", async (contacts: BContact[]) => {
 
-    if (allowupserts && allowupserts.value === "enabled") {
-    
-    logger.info("Upserts Liberados");
-  
-    	wbot.ev.on("contacts.upsert", async (contacts: BContact[]) => {
-      	  console.log("upsert", contacts);
-      	  await addContactsUpdateJob(whatsapp?.id,contacts);
-    	});
-    
-    }
+      await createOrUpdateBaileysService({
+        whatsappId: whatsapp.id,
+        contacts,
+      });
+    });
 
   } catch (err) {
     Sentry.captureException(err);

@@ -1,43 +1,44 @@
 /* eslint-disable no-unused-vars */
 
-import React, { useContext, useEffect, useReducer, useState } from "react";
+import React, { useState, useEffect, useReducer, useContext } from "react";
 import { toast } from "react-toastify";
 
 import { useHistory } from "react-router-dom";
 
-import Button from "@material-ui/core/Button";
-import IconButton from "@material-ui/core/IconButton";
-import InputAdornment from "@material-ui/core/InputAdornment";
+import { makeStyles } from "@material-ui/core/styles";
 import Paper from "@material-ui/core/Paper";
+import Button from "@material-ui/core/Button";
 import Table from "@material-ui/core/Table";
 import TableBody from "@material-ui/core/TableBody";
 import TableCell from "@material-ui/core/TableCell";
 import TableHead from "@material-ui/core/TableHead";
 import TableRow from "@material-ui/core/TableRow";
-import TextField from "@material-ui/core/TextField";
-import { makeStyles } from "@material-ui/core/styles";
+import IconButton from "@material-ui/core/IconButton";
 import SearchIcon from "@material-ui/icons/Search";
+import TextField from "@material-ui/core/TextField";
+import InputAdornment from "@material-ui/core/InputAdornment";
 
 import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
-import DescriptionIcon from "@material-ui/icons/Description";
 import EditIcon from "@material-ui/icons/Edit";
-import PauseCircleOutlineIcon from "@material-ui/icons/PauseCircleOutline";
+import DescriptionIcon from "@material-ui/icons/Description";
+import TimerOffIcon from "@material-ui/icons/TimerOff";
 import PlayCircleOutlineIcon from "@material-ui/icons/PlayCircleOutline";
+import PauseCircleOutlineIcon from "@material-ui/icons/PauseCircleOutline";
 
 import MainContainer from "../../components/MainContainer";
 import MainHeader from "../../components/MainHeader";
 import Title from "../../components/Title";
 
-import { Grid } from "@material-ui/core";
-import { isArray } from "lodash";
-import CampaignModal from "../../components/CampaignModal";
-import ConfirmationModal from "../../components/ConfirmationModal";
-import TableRowSkeleton from "../../components/TableRowSkeleton";
-import { SocketContext } from "../../context/Socket/SocketContext";
-import toastError from "../../errors/toastError";
-import { useDate } from "../../hooks/useDate";
 import api from "../../services/api";
 import { i18n } from "../../translate/i18n";
+import TableRowSkeleton from "../../components/TableRowSkeleton";
+import CampaignModal from "../../components/CampaignModal";
+import ConfirmationModal from "../../components/ConfirmationModal";
+import toastError from "../../errors/toastError";
+import { Grid } from "@material-ui/core";
+import { isArray } from "lodash";
+import { useDate } from "../../hooks/useDate";
+import { SocketContext } from "../../context/Socket/SocketContext";
 
 const reducer = (state, action) => {
   if (action.type === "LOAD_CAMPAIGNS") {
@@ -203,15 +204,15 @@ const Campaigns = () => {
   const formatStatus = (val) => {
     switch (val) {
       case "INATIVA":
-        return "Inativa";
+        return i18n.t("campaigns.status.inactive");
       case "PROGRAMADA":
-        return "Programada";
+        return i18n.t("campaigns.status.programmed");
       case "EM_ANDAMENTO":
-        return "Em Andamento";
+        return i18n.t("campaigns.status.inProgress");
       case "CANCELADA":
-        return "Cancelada";
+        return i18n.t("campaigns.status.canceled");
       case "FINALIZADA":
-        return "Finalizada";
+        return i18n.t("campaigns.status.finished");
       default:
         return val;
     }
@@ -327,9 +328,6 @@ const Campaigns = () => {
               <TableCell align="center">
                 {i18n.t("campaigns.table.completedAt")}
               </TableCell>
-              {/* <TableCell align="center">
-                {i18n.t("campaigns.table.confirmation")}
-              </TableCell> */}
               <TableCell align="center">
                 {i18n.t("campaigns.table.actions")}
               </TableCell>
@@ -346,31 +344,28 @@ const Campaigns = () => {
                   <TableCell align="center">
                     {campaign.contactListId
                       ? campaign.contactList.name
-                      : "Não definida"}
+                      : i18n.t("campaigns.table.notDefined")}
                   </TableCell>
                   <TableCell align="center">
                     {campaign.whatsappId
                       ? campaign.whatsapp.name
-                      : "Não definido"}
+                      : i18n.t("campaigns.table.notDefined2")}
                   </TableCell>
                   <TableCell align="center">
                     {campaign.scheduledAt
                       ? datetimeToClient(campaign.scheduledAt)
-                      : "Sem agendamento"}
+                      : i18n.t("campaigns.table.notScheduled")}
                   </TableCell>
                   <TableCell align="center">
                     {campaign.completedAt
                       ? datetimeToClient(campaign.completedAt)
-                      : "Não concluída"}
+                      : i18n.t("campaigns.table.notConcluded")}
                   </TableCell>
-                  {/* <TableCell align="center">
-                    {campaign.confirmation ? "Habilitada" : "Desabilitada"}
-                  </TableCell> */}
                   <TableCell align="center">
                     {campaign.status === "EM_ANDAMENTO" && (
                       <IconButton
                         onClick={() => cancelCampaign(campaign)}
-                        title="Parar Campanha"
+                        title={i18n.t("campaigns.table.stopCampaign")}
                         size="small"
                       >
                         <PauseCircleOutlineIcon />
@@ -379,7 +374,7 @@ const Campaigns = () => {
                     {campaign.status === "CANCELADA" && (
                       <IconButton
                         onClick={() => restartCampaign(campaign)}
-                        title="Parar Campanha"
+                        title={i18n.t("campaigns.table.stopCampaign")}
                         size="small"
                       >
                         <PlayCircleOutlineIcon />

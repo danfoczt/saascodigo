@@ -1,6 +1,5 @@
 import { Request, Response } from "express";
 import { getIO } from "../libs/socket";
-import { head } from "lodash";
 
 import AppError from "../errors/AppError";
 
@@ -10,6 +9,9 @@ import UpdateService from "../services/ScheduleServices/UpdateService";
 import ShowService from "../services/ScheduleServices/ShowService";
 import DeleteService from "../services/ScheduleServices/DeleteService";
 import Schedule from "../models/Schedule";
+import path from "path";
+import fs from "fs";
+import { head } from "lodash";
 
 type IndexQuery = {
   searchParam?: string;
@@ -34,47 +36,24 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
 };
 
 export const store = async (req: Request, res: Response): Promise<Response> => {
-
-  const recebeScheduleData = req?.body
-  const formatInfo= JSON.parse(recebeScheduleData?.scheduleData)
-  const files = req?.files as Express.Multer.File[];
-  const file = head(files);
-
   const {
     body,
     sendAt,
     contactId,
-    userId,
-    geral,
-    queueId,
-    whatsappId,
-    repeatEvery,
-    selectDaysRecorrenci,
-    repeatCount,
-  } = formatInfo;
+    userId
+  } = req.body;
   const { companyId } = req.user;
-
-  //console.log(req.body);
-
 
   const schedule = await CreateService({
     body,
     sendAt,
     contactId,
     companyId,
-    userId,
-    geral,
-    queueId,
-    whatsappId,
-    mediaPath: file?.filename ,
-    mediaName: file?.originalname,
-    repeatEvery,
-    selectDaysRecorrenci,
-    repeatCount,
+    userId
   });
 
   const io = getIO();
-  io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-schedule`, {
+  io.to(`company-${companyId}-mainchannel`).emit("schedule", {
     action: "create",
     schedule
   });
@@ -100,24 +79,13 @@ export const update = async (
   }
 
   const { scheduleId } = req.params;
-  const recebeScheduleData = req?.body;
-  const scheduleData = JSON.parse(recebeScheduleData?.scheduleData)
-  const files = req?.files as Express.Multer.File[];
-  const file = head(files);
+  const scheduleData = req.body;
   const { companyId } = req.user;
 
-  const importAnexoSchedule = await Schedule.findByPk(scheduleId);
-
-  await importAnexoSchedule.update({
-    mediaPath: file?.filename,
-    mediaName: file?.originalname
-  });
-  await importAnexoSchedule.reload();
-
-  const schedule = await UpdateService({ scheduleData, id: scheduleId, companyId,  mediaPath:file?.filename, mediaName:file?.originalname });
+  const schedule = await UpdateService({ scheduleData, id: scheduleId, companyId });
 
   const io = getIO();
-  io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-schedule`, {
+  io.to(`company-${companyId}-mainchannel`).emit("schedule", {
     action: "update",
     schedule
   });
@@ -135,10 +103,52 @@ export const remove = async (
   await DeleteService(scheduleId, companyId);
 
   const io = getIO();
- io.emit("schedule", {
+  io.to(`company-${companyId}-mainchannel`).emit("schedule", {
     action: "delete",
     scheduleId
   });
 
   return res.status(200).json({ message: "Schedule deleted" });
+};
+
+export const mediaUpload = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const { id } = req.params;
+  const files = req.files as Express.Multer.File[];
+  const file = head(files);
+
+  try {
+    const schedule = await Schedule.findByPk(id);
+    schedule.mediaPath = file.filename;
+    schedule.mediaName = file.originalname;
+
+    await schedule.save();
+    return res.send({ mensagem: "Arquivo Anexado" });
+    } catch (err: any) {
+      throw new AppError(err.message);
+  }
+};
+
+export const deleteMedia = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const { id } = req.params;
+
+  try {
+    const schedule = await Schedule.findByPk(id);
+    const filePath = path.resolve("public", schedule.mediaPath);
+    const fileExists = fs.existsSync(filePath);
+    if (fileExists) {
+      fs.unlinkSync(filePath);
+    }
+    schedule.mediaPath = null;
+    schedule.mediaName = null;
+    await schedule.save();
+    return res.send({ mensagem: "Arquivo Excluído" });
+    } catch (err: any) {
+      throw new AppError(err.message);
+  }
 };
